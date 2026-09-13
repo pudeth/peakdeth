@@ -1,10 +1,10 @@
-# Rithy Chanvirak Photography Portfolio
+# Peak Deth Portfolio & Developer Systems
 
-A modern, full-stack photography portfolio website with complete CMS admin panel.
+A modern, full-stack developer systems showcase & photography portfolio website with complete CMS admin panel.
 
-## Live Demo
+## Repository
 
-- Website: https://www.rithychanvirak.com/
+- GitHub: https://github.com/pudeth/peakdeth
 
 ![Next.js](https://img.shields.io/badge/Next.js-15.5.2-black)
 ![React](https://img.shields.io/badge/React-19.1.0-blue)
