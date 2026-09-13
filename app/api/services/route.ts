@@ -19,20 +19,24 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const onlyHomepage = searchParams.get('onlyHomepage') === 'true'
 
+    try {
+      const supabase = createAdminClient()
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('order', { ascending: true })
+
+      if (!error && data && data.length > 0) {
+        const filtered = onlyHomepage ? data.filter((s: any) => s.show_on_homepage !== false && s.is_active !== false) : data
+        return NextResponse.json({ services: filtered })
+      }
+    } catch {
+      // Fall through to local
+    }
+
     const local = await readLocalServices()
     if (Array.isArray(local) && local.length > 0) {
       const filtered = onlyHomepage ? local.filter((s: any) => s.show_on_homepage !== false && s.is_active !== false) : local
-      return NextResponse.json({ services: filtered })
-    }
-
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .order('order', { ascending: true })
-
-    if (!error && data && data.length > 0) {
-      const filtered = onlyHomepage ? data.filter((s: any) => s.show_on_homepage !== false && s.is_active !== false) : data
       return NextResponse.json({ services: filtered })
     }
 

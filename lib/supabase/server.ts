@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { isPlaceholderSupabaseUrl, getMockFetch } from './mock-fetch'
+import { SUPABASE_CONFIG, isConfiguredSupabase } from './config'
 
 export async function createClient() {
   let cookieStore: Awaited<ReturnType<typeof cookies>> | null = null
@@ -10,13 +11,9 @@ export async function createClient() {
     // Outside request scope (e.g. script, static generation, background task)
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-  const supabasePublicKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-    'placeholder-anon-key'
-
-  const isPlaceholder = isPlaceholderSupabaseUrl(supabaseUrl) || supabasePublicKey === 'placeholder-anon-key'
+  const supabaseUrl = SUPABASE_CONFIG.url
+  const supabasePublicKey = SUPABASE_CONFIG.anonKey
+  const isPlaceholder = !isConfiguredSupabase()
 
   return createServerClient(
     supabaseUrl,
@@ -49,16 +46,9 @@ export async function createClient() {
 }
 
 export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-  const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const publishableKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  const hasValidServiceKey = rawServiceKey && !rawServiceKey.includes('placeholder')
-  const keyToUse = hasValidServiceKey ? rawServiceKey : (publishableKey || 'placeholder-anon-key')
-
-  const isPlaceholder = isPlaceholderSupabaseUrl(supabaseUrl) || keyToUse.includes('placeholder')
+  const supabaseUrl = SUPABASE_CONFIG.url
+  const keyToUse = SUPABASE_CONFIG.serviceRoleKey
+  const isPlaceholder = !isConfiguredSupabase()
 
   return createServerClient(
     supabaseUrl,

@@ -18,12 +18,28 @@ async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
   await writeJsonStorage(filename, data)
 }
 
+import { isConfiguredSupabase } from '@/lib/supabase/config'
+
 function isSupabasePlaceholder(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  return !url || url.includes('placeholder')
+  return !isConfiguredSupabase()
 }
 
 export async function getStoredVideos(): Promise<Video[]> {
+  if (!isSupabasePlaceholder()) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+      const { data, error } = await supabase
+        .from('videos')
+        .select('*')
+        .order('order', { ascending: true })
+
+      if (!error && data && data.length > 0) {
+        return data as Video[]
+      }
+    } catch {}
+  }
+
   const videos = await readJsonFile<Video[]>(VIDEOS_FILE, [])
   return videos.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 }

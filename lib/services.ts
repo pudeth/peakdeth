@@ -1,4 +1,4 @@
-﻿export interface ServiceItem {
+export interface ServiceItem {
   id?: string
   _id: string
   number: number
@@ -71,7 +71,44 @@ function isConnectionOrPlaceholderError(error: unknown): boolean {
 
 export async function getServices(options?: { onlyHomepage?: boolean }): Promise<ServiceItem[]> {
   try {
-    // 1. Try reading from local data/services.json
+    // 1. Try Supabase first
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('is_active', true)
+        .order('order', { ascending: true })
+
+      if (!error && data && data.length > 0) {
+        const isOldService = (title?: string) =>
+          !title || /photography|videography|retouching|portrait|wedding|event|commercial & editorial/i.test(title)
+
+        let activeServices = data.filter(s => !isOldService(s.title))
+        if (options?.onlyHomepage) {
+          activeServices = activeServices.filter(s => s.show_on_homepage !== false)
+        }
+
+        if (activeServices.length > 0) {
+          return activeServices.map((service, idx) => ({
+            id: service.id || service._id || `service-${idx + 1}`,
+            _id: service.id || service._id || `service-${idx + 1}`,
+            number: Number(service.number) || idx + 1,
+            title: service.title,
+            description: service.description,
+            icon: service.icon || 'pos',
+            link: service.link || null,
+            show_on_homepage: service.show_on_homepage ?? true,
+            is_active: service.is_active ?? true,
+            order: Number(service.order) || idx + 1,
+          }))
+        }
+      }
+    } catch {}
+
+    // 2. Fall back to local data/services.json
     try {
       const { readFile } = await import('node:fs/promises')
       const path = await import('node:path')
@@ -100,50 +137,7 @@ export async function getServices(options?: { onlyHomepage?: boolean }): Promise
       }
     } catch {}
 
-    // 2. Try Supabase
-    const { createClient } = await import('@/lib/supabase/server')
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .eq('is_active', true)
-      .order('order', { ascending: true })
-
-    if (error) {
-      if (!isConnectionOrPlaceholderError(error) && error.code !== 'PGRST116' && !error.message?.includes('relation "services" does not exist')) {
-        console.error('Error fetching services:', {
-          message: error.message,
-          code: error.code,
-        })
-      }
-      return options?.onlyHomepage ? DEFAULT_SERVICES.filter(s => s.show_on_homepage !== false) : DEFAULT_SERVICES
-    }
-
-    const isOldService = (title?: string) =>
-      !title || /photography|videography|retouching|portrait|wedding|event|commercial & editorial/i.test(title)
-
-    let activeServices = (data || []).filter(s => !isOldService(s.title))
-    if (options?.onlyHomepage) {
-      activeServices = activeServices.filter(s => s.show_on_homepage !== false)
-    }
-
-    if (activeServices.length === 0) {
-      return options?.onlyHomepage ? DEFAULT_SERVICES.filter(s => s.show_on_homepage !== false) : DEFAULT_SERVICES
-    }
-
-    return activeServices.map((service, idx) => ({
-      id: service.id || service._id || `service-${idx + 1}`,
-      _id: service.id || service._id || `service-${idx + 1}`,
-      number: Number(service.number) || idx + 1,
-      title: service.title,
-      description: service.description,
-      icon: service.icon,
-      link: service.link,
-      show_on_homepage: service.show_on_homepage ?? true,
-      is_active: service.is_active ?? true,
-      order: Number(service.order) || idx + 1,
-    }))
+    return options?.onlyHomepage ? DEFAULT_SERVICES.filter(s => s.show_on_homepage !== false) : DEFAULT_SERVICES
   } catch (error) {
     if (!isConnectionOrPlaceholderError(error)) {
       console.error('Error fetching services (catch block):', error)

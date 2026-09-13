@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
+import { isConfiguredSupabase } from '@/lib/supabase/config'
 
 export interface HeroContentData {
   id?: string
@@ -63,8 +64,7 @@ async function writeLocalData(data: Record<string, any>): Promise<void> {
 // ----------------------------------------------------------------------
 
 export async function getHeroContent(): Promise<HeroContentData> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder')
+  const isPlaceholder = !isConfiguredSupabase()
 
   if (!isPlaceholder) {
     try {
@@ -126,8 +126,7 @@ export async function saveHeroContentServer(hero: HeroContentData): Promise<Hero
   localData.hero = updatedHero
   await writeLocalData(localData)
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder')
+  const isPlaceholder = !isConfiguredSupabase()
 
   if (!isPlaceholder) {
     try {
@@ -155,8 +154,7 @@ export async function saveHeroContentServer(hero: HeroContentData): Promise<Hero
 // ----------------------------------------------------------------------
 
 export async function getAboutContent(): Promise<AboutContentData> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder')
+  const isPlaceholder = !isConfiguredSupabase()
 
   if (!isPlaceholder) {
     try {
@@ -222,8 +220,7 @@ export async function saveAboutContentServer(about: AboutContentData): Promise<A
   localData.about = updatedAbout
   await writeLocalData(localData)
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder')
+  const isPlaceholder = !isConfiguredSupabase()
 
   if (!isPlaceholder) {
     try {
@@ -324,8 +321,7 @@ export const DEFAULT_CONTACTS: ContactInfoItem[] = [
 ]
 
 export async function getContactContent(): Promise<ContactInfoItem[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder')
+  const isPlaceholder = !isConfiguredSupabase()
 
   if (!isPlaceholder) {
     try {
@@ -403,8 +399,7 @@ export async function saveContactItemServer(item: Partial<ContactInfoItem>): Pro
   localData.contacts = contacts
   await writeLocalData(localData)
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder')
+  const isPlaceholder = !isConfiguredSupabase()
 
   if (!isPlaceholder) {
     try {
@@ -434,8 +429,7 @@ export async function deleteContactItemServer(id: string): Promise<boolean> {
   localData.contacts = contacts.filter((c) => c.id !== id)
   await writeLocalData(localData)
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder')
+  const isPlaceholder = !isConfiguredSupabase()
 
   if (!isPlaceholder) {
     try {
@@ -462,8 +456,7 @@ export async function updateContactStatusServer(id: string, is_active: boolean):
     await writeLocalData(localData)
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder')
+  const isPlaceholder = !isConfiguredSupabase()
 
   if (!isPlaceholder) {
     try {
@@ -492,8 +485,7 @@ export async function setAllContactStatusServer(is_active: boolean): Promise<boo
   localData.contacts = contacts
   await writeLocalData(localData)
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder')
+  const isPlaceholder = !isConfiguredSupabase()
 
   if (!isPlaceholder) {
     try {

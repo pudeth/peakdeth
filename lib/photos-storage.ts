@@ -10,6 +10,7 @@ const COLLECTION_PHOTOS_FILE = path.join(DATA_DIR, 'collection_photos.json')
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads')
 
 import { readJsonStorage, writeJsonStorage } from '@/lib/server-storage'
+import { isConfiguredSupabase } from '@/lib/supabase/config'
 
 async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
   const filename = path.basename(filePath)
@@ -22,8 +23,7 @@ async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
 }
 
 function isSupabasePlaceholder(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  return !url || url.includes('placeholder')
+  return !isConfiguredSupabase()
 }
 
 // ----------------------------------------------------------------------
@@ -31,6 +31,21 @@ function isSupabasePlaceholder(): boolean {
 // ----------------------------------------------------------------------
 
 export async function getStoredPhotos(): Promise<Photo[]> {
+  if (!isSupabasePlaceholder()) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+      const { data, error } = await supabase
+        .from('photos')
+        .select('*')
+        .order('order', { ascending: true })
+
+      if (!error && data && data.length > 0) {
+        return data as Photo[]
+      }
+    } catch {}
+  }
+
   let photos = await readJsonFile<Photo[]>(PHOTOS_FILE, [])
 
   // Auto-seed existing uploads if photos file is empty
@@ -173,6 +188,24 @@ export async function deleteStoredPhotos(ids: string[]): Promise<boolean> {
 // ----------------------------------------------------------------------
 
 export async function getStoredCollections(): Promise<Collection[]> {
+  if (!isSupabasePlaceholder()) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+      const { data, error } = await supabase
+        .from('collections')
+        .select('*')
+        .order('order', { ascending: true })
+
+      if (!error && data && data.length > 0) {
+        return data.map((c: any) => ({
+          ...c,
+          title: c.title || c.name || 'Untitled Album',
+        })) as Collection[]
+      }
+    } catch {}
+  }
+
   let collections = await readJsonFile<Collection[]>(COLLECTIONS_FILE, [])
 
   // Auto-seed default collection only if empty
@@ -368,6 +401,27 @@ export async function deleteStoredCollection(id: string): Promise<boolean> {
 // ----------------------------------------------------------------------
 
 export async function getStoredCollectionPhotos(): Promise<CollectionPhoto[]> {
+  if (!isSupabasePlaceholder()) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+      const { data, error } = await supabase
+        .from('collection_photos')
+        .select('*')
+        .order('order', { ascending: true })
+
+      if (!error && data && data.length > 0) {
+        return data.map((cp: any, idx: number) => ({
+          id: `${cp.collection_id}-${cp.photo_id}`,
+          collection_id: cp.collection_id,
+          photo_id: cp.photo_id,
+          order: cp.order ?? idx,
+          created_at: new Date().toISOString(),
+        }))
+      }
+    } catch {}
+  }
+
   return await readJsonFile<CollectionPhoto[]>(COLLECTION_PHOTOS_FILE, [])
 }
 
