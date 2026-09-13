@@ -50,17 +50,19 @@ export async function createClient() {
 
 export function createAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-  const serviceRoleKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+  const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const publishableKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-    'placeholder-anon-key'
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  const isPlaceholder = isPlaceholderSupabaseUrl(supabaseUrl) || serviceRoleKey.includes('placeholder')
+  const hasValidServiceKey = rawServiceKey && !rawServiceKey.includes('placeholder')
+  const keyToUse = hasValidServiceKey ? rawServiceKey : (publishableKey || 'placeholder-anon-key')
+
+  const isPlaceholder = isPlaceholderSupabaseUrl(supabaseUrl) || keyToUse.includes('placeholder')
 
   return createServerClient(
     supabaseUrl,
-    serviceRoleKey,
+    keyToUse,
     {
       cookies: {
         getAll() {
