@@ -78,14 +78,14 @@ export function Hero({ data }: { data: HeroData | null }) {
       <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-[#030303] pointer-events-none" />
       
       {/* Ambient Radial Mesh Glows */}
-      <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] max-w-full h-[380px] bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-cyan-500/15 blur-[140px] rounded-full z-0" />
+      <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] max-w-full h-[380px] bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-cyan-500/15 blur-[45px] sm:blur-[140px] rounded-full z-0 transform-gpu" />
 
       {/* 3. Luxury Viewfinder Console Frame */}
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 max-w-4xl w-full mx-auto p-4 sm:p-10 md:p-12 rounded-3xl border border-white/[0.1] bg-zinc-950/60 backdrop-blur-2xl shadow-[0_25px_80px_rgba(0,0,0,0.85)] transition-all duration-500 hover:border-white/[0.18]"
+        className="relative z-10 max-w-4xl w-full mx-auto p-4 sm:p-10 md:p-12 rounded-3xl border border-white/[0.1] bg-zinc-950/60 backdrop-blur-md sm:backdrop-blur-2xl shadow-[0_25px_80px_rgba(0,0,0,0.85)] transition-all duration-500 hover:border-white/[0.18]"
       >
         {/* Subtle Optical Corner Reticles */}
         <span className="absolute top-3 left-3 text-white/30 text-xs font-mono select-none pointer-events-none">＋</span>

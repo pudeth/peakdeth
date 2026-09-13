@@ -56,7 +56,7 @@ export function TechMarquee() {
 
 
   return (
-    <div className="relative w-full overflow-hidden py-4 sm:py-5 border-y border-white/[0.08] bg-gradient-to-r from-zinc-950 via-zinc-900/50 to-zinc-950 backdrop-blur-md select-none group/marquee">
+    <div className="relative w-full overflow-hidden py-4 sm:py-5 border-y border-white/[0.08] bg-zinc-950 sm:bg-gradient-to-r sm:from-zinc-950 sm:via-zinc-900/50 sm:to-zinc-950 sm:backdrop-blur-md select-none group/marquee">
       {/* Self-contained, guaranteed smooth GPU-accelerated left marquee styles */}
       <style
         dangerouslySetInnerHTML={{

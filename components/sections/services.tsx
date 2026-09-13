@@ -167,9 +167,9 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                     setActivePreview({ url: service.link, title: localized.title })
                   }
                 }}
-                className={`group relative h-[470px] sm:h-[490px] rounded-2xl bg-zinc-950 border border-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.7)] hover:border-white/20 transition-all duration-500 flex flex-col overflow-hidden ${localized.glow} ${service.link ? 'cursor-pointer' : ''}`}
+                className={`group relative h-auto min-h-[290px] sm:h-[490px] rounded-2xl bg-zinc-950 border border-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.7)] hover:border-white/20 transition-all duration-500 flex flex-col overflow-hidden ${localized.glow} ${service.link ? 'cursor-pointer' : ''}`}
               >
-                {/* Desktop Browser Window Header */}
+                {/* Desktop & Mobile Browser Window Header */}
                 <div className="px-3.5 py-2.5 bg-zinc-900/90 border-b border-white/10 flex items-center justify-between shrink-0 select-none z-30">
                   {/* Traffic Lights */}
                   <div className="flex items-center gap-1.5">
@@ -197,8 +197,65 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                   </div>
                 </div>
 
-                {/* Normal Window Viewport (Desktop Web View) */}
-                <div className="relative flex-1 w-full min-h-0 overflow-hidden bg-zinc-950">
+                {/* MOBILE VIEW (< sm): Clean, Instant, Zero Janky Background Iframes */}
+                <div className="flex sm:hidden flex-col justify-between p-5 flex-1 min-h-0 bg-zinc-950">
+                  <div>
+                    <div className="flex items-center gap-2.5 mb-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-zinc-900 border border-white/15 flex items-center justify-center shrink-0">
+                        {renderServiceIcon(service, 'w-4 h-4')}
+                      </div>
+                      <h3 suppressHydrationWarning className="text-base font-bold text-white truncate">
+                        {localized.title}
+                      </h3>
+                    </div>
+
+                    <p suppressHydrationWarning className="text-zinc-300 text-xs leading-relaxed mb-4 line-clamp-4">
+                      {localized.description}
+                    </p>
+
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {localized.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${localized.badgeBg}`}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Mobile Actions Bar */}
+                  {service.link && (
+                    <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-300">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setActivePreview({ url: service.link!, title: localized.title })
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 hover:text-black text-xs font-semibold text-emerald-300 border border-emerald-500/30 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>{t.services.previewBtn}</span>
+                      </button>
+
+                      <a
+                        href={service.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 transition-colors"
+                        title={t.services.openNewWindow}
+                      >
+                        <ArrowUpRight className="w-4 h-4" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* DESKTOP VIEW (>= sm): Normal Window Viewport with Scaled Web View */}
+                <div className="hidden sm:flex relative flex-1 w-full min-h-0 overflow-hidden bg-zinc-950">
                   {service.link ? (
                     <CardWebsitePreview
                       url={service.link}
@@ -275,8 +332,8 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                   </div>
                 </div>
 
-                {/* Normal Window Bottom Bar */}
-                <div className="px-3.5 py-2 bg-zinc-950/90 border-t border-white/10 flex items-center justify-between text-[11px] text-zinc-400 shrink-0 select-none z-30 font-mono">
+                {/* Normal Window Bottom Bar (Desktop) */}
+                <div className="hidden sm:flex px-3.5 py-2 bg-zinc-950/90 border-t border-white/10 items-center justify-between text-[11px] text-zinc-400 shrink-0 select-none z-30 font-mono">
                   <div className="flex items-center gap-2 truncate">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     <span className="text-zinc-300 font-medium truncate">{localized.title}</span>
@@ -297,9 +354,9 @@ export function Services({ services: initialServices }: { services: ServiceItem[
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: items.length * 0.1 }}
               viewport={{ once: true }}
-              className="group relative h-[470px] sm:h-[490px] rounded-2xl bg-zinc-950 border border-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.7)] hover:border-amber-500/40 hover:shadow-[0_0_40px_rgba(245,158,11,0.2)] transition-all duration-500 flex flex-col overflow-hidden"
+              className="group relative h-auto min-h-[290px] sm:h-[490px] rounded-2xl bg-zinc-950 border border-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.7)] hover:border-amber-500/40 hover:shadow-[0_0_40px_rgba(245,158,11,0.2)] transition-all duration-500 flex flex-col overflow-hidden"
             >
-              {/* Desktop Window Titlebar */}
+              {/* Desktop & Mobile Window Titlebar */}
               <div className="px-3.5 py-2.5 bg-zinc-900/90 border-b border-white/10 flex items-center justify-between shrink-0 select-none z-30">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 group-hover:bg-rose-500 transition-colors" />
@@ -320,8 +377,53 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                 </div>
               </div>
 
-              {/* Desktop Console Viewport */}
-              <div className="relative flex-1 w-full min-h-0 overflow-hidden bg-gradient-to-b from-zinc-900 via-zinc-950 to-black select-none">
+              {/* MOBILE VIEW (< sm): Clean Companion Card */}
+              <div className="flex sm:hidden flex-col justify-between p-5 flex-1 min-h-0 bg-zinc-950">
+                <div>
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-zinc-900 border border-white/15 flex items-center justify-center shrink-0">
+                      <Smartphone className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <h3 className="text-base font-bold text-white truncate">
+                      {t.services.cards.mobileTitle}
+                    </h3>
+                  </div>
+
+                  <p className="text-zinc-300 text-xs leading-relaxed mb-4 line-clamp-4">
+                    {t.services.cards.mobileDesc}
+                  </p>
+
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {t.services.cards.mobileTags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-[10px] font-mono px-2 py-0.5 rounded-md border bg-amber-500/10 text-amber-300 border-amber-500/20"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mobile Companion Actions */}
+                <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-300">
+                  <span className="font-mono text-[11px] flex items-center gap-1.5 text-amber-400 font-medium select-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    {t.services.availableForBuild}
+                  </span>
+
+                  <a
+                    href="/contact"
+                    className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500 hover:text-black text-xs font-semibold text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                  >
+                    <span>{t.services.inquireBtn}</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+
+              {/* DESKTOP VIEW (>= sm): Console Viewport + Hover Overlay */}
+              <div className="hidden sm:flex relative flex-1 w-full min-h-0 overflow-hidden bg-gradient-to-b from-zinc-900 via-zinc-950 to-black select-none flex-col">
                 <div className="h-full p-4 flex flex-col justify-between">
                   {/* System telemetry bar */}
                   <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 pb-2 border-b border-white/5">
@@ -423,8 +525,8 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                 </div>
               </div>
 
-              {/* Window Bottom Status Bar */}
-              <div className="px-3.5 py-2 bg-zinc-950/90 border-t border-white/10 flex items-center justify-between text-[11px] text-zinc-400 shrink-0 select-none z-30 font-mono">
+              {/* Window Bottom Status Bar (Desktop) */}
+              <div className="hidden sm:flex px-3.5 py-2 bg-zinc-950/90 border-t border-white/10 items-center justify-between text-[11px] text-zinc-400 shrink-0 select-none z-30 font-mono">
                 <div className="flex items-center gap-2 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                   <span className="text-zinc-300 font-medium truncate">{t.services.cards.mobileTitle}</span>

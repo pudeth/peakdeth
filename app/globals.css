@@ -129,18 +129,32 @@
   }
   html {
     font-family: "Kantumruy Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    height: 100%;
+    min-height: 100%;
     overflow-x: hidden;
-    overflow-y: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
   body {
     font-family: "Kantumruy Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     @apply bg-black text-foreground font-sans;
-    height: 100%;
+    min-height: 100dvh;
     overflow-x: hidden;
+    touch-action: pan-y;
+  }
+
+  /* Performance & mobile touch optimizations */
+  @media (max-width: 768px) {
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+    .backdrop-blur-2xl,
+    .backdrop-blur-xl {
+      -webkit-backdrop-filter: blur(8px) !important;
+      backdrop-filter: blur(8px) !important;
+    }
   }
 
   /* Performance optimizations */
@@ -346,6 +360,13 @@
     background-size: 100px 100px, 60px 60px;
     animation: patternShift 30s linear infinite;
     z-index: 0;
+  }
+
+  @media (max-width: 768px) {
+    .unified-background::before,
+    .unified-background::after {
+      animation: none !important;
+    }
   }
 
   @keyframes backgroundFlow {
