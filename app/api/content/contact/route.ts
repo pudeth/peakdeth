@@ -31,8 +31,11 @@ async function checkIsAuthorized(): Promise<boolean> {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    let supabaseErr: any = null
+    let tryErr: any = null
+
     try {
       const { createAdminClient } = await import('@/lib/supabase/server')
       const supabase = createAdminClient()
@@ -41,9 +44,11 @@ export async function GET() {
         .select('*')
         .order('order', { ascending: true })
 
-      if (!error && data && data.length > 0) {
+      if (error) {
+        supabaseErr = error
+      } else if (data && data.length > 0) {
         return NextResponse.json(
-          { contacts: data },
+          { contacts: data, source: 'supabase', version: 'v-dynamic-1' },
           {
             headers: {
               'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -53,13 +58,13 @@ export async function GET() {
           }
         )
       }
-    } catch (err) {
-      console.warn('Supabase contact fetch error:', err)
+    } catch (err: any) {
+      tryErr = err?.message || String(err)
     }
 
     const contacts = await getContactContent()
     return NextResponse.json(
-      { contacts },
+      { contacts, source: 'fallback', supabaseErr, tryErr, version: 'v-dynamic-1' },
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
