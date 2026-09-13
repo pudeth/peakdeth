@@ -27,7 +27,7 @@ export const buildCloudinaryUrl = (
     return publicId
   }
 
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME
   
   if (!cloudName || cloudName.includes('placeholder')) {
     return '/file.svg'
