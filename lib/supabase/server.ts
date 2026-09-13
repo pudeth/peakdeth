@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseJsClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { isPlaceholderSupabaseUrl, getMockFetch } from './mock-fetch'
 import { SUPABASE_CONFIG, isConfiguredSupabase } from './config'
@@ -50,21 +51,24 @@ export function createAdminClient() {
   const keyToUse = SUPABASE_CONFIG.serviceRoleKey
   const isPlaceholder = !isConfiguredSupabase()
 
-  return createServerClient(
-    supabaseUrl,
-    keyToUse,
-    {
+  if (isPlaceholder) {
+    return createServerClient(supabaseUrl, keyToUse, {
       cookies: {
         getAll() {
           return []
         },
         setAll() {},
       },
-      global: isPlaceholder
-        ? {
-            fetch: getMockFetch(),
-          }
-        : undefined,
-    }
-  )
+      global: {
+        fetch: getMockFetch(),
+      },
+    })
+  }
+
+  return createSupabaseJsClient(supabaseUrl, keyToUse, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
 }

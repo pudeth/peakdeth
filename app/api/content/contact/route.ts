@@ -33,6 +33,30 @@ async function checkIsAuthorized(): Promise<boolean> {
 
 export async function GET() {
   try {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+      const { data, error } = await supabase
+        .from('contact_info')
+        .select('*')
+        .order('order', { ascending: true })
+
+      if (!error && data && data.length > 0) {
+        return NextResponse.json(
+          { contacts: data },
+          {
+            headers: {
+              'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0',
+            },
+          }
+        )
+      }
+    } catch (err) {
+      console.warn('Supabase contact fetch error:', err)
+    }
+
     const contacts = await getContactContent()
     return NextResponse.json(
       { contacts },
