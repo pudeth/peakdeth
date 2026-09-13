@@ -1,0 +1,25 @@
+[
+  {
+    "id": "894c5928-02da-4bcb-9a45-bce289c26860",
+    "title": "Trip",
+    "slug": "trip",
+    "description": "",
+    "featured": false,
+    "order": 0,
+    "created_at": "2026-09-11T09:09:59.202Z",
+    "updated_at": "2026-09-11T09:09:59.202Z",
+    "cover_image_url": "/uploads/1789118081221_49d856f1.JPG"
+  },
+  {
+    "id": "0afe9a09-dde9-4d19-a3ad-8e400c75f6e6",
+    "title": "Family",
+    "slug": "family",
+    "description": "",
+    "parent_id": "894c5928-02da-4bcb-9a45-bce289c26860",
+    "featured": false,
+    "order": 0,
+    "created_at": "2026-09-11T09:10:20.999Z",
+    "updated_at": "2026-09-11T09:11:45.777Z",
+    "cover_image_url": "/uploads/1789118081221_49d856f1.JPG"
+  }
+]

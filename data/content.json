@@ -1,0 +1,81 @@
+{
+  "hero": {
+    "id": "hero-1",
+    "title": "PEAK DETH",
+    "subtitle": "Software Developer & Cameraman • POS, Systems, Web & Mobile Apps • Cinematic Photography & Video Production",
+    "background_image_url": "/uploads/1789182800174_c0dac79b.gif",
+    "background_image_id": "/uploads/1789182800174_c0dac79b.gif",
+    "overlay_opacity": 0.5,
+    "is_active": true,
+    "updated_at": "2026-09-12T03:13:22.129Z"
+  },
+  "contacts": [
+    {
+      "id": "contact-1",
+      "type": "email",
+      "label": "Email",
+      "value": "hello@peakdeth.com",
+      "icon": "📧",
+      "is_active": true,
+      "order": 0,
+      "created_at": "2026-09-12T09:42:04.801Z",
+      "updated_at": "2026-09-13T01:12:22.460Z"
+    },
+    {
+      "id": "contact-2",
+      "type": "phone",
+      "label": "Phone Number",
+      "value": "+855 12 345 678",
+      "icon": "📞",
+      "is_active": true,
+      "order": 1,
+      "created_at": "2026-09-12T09:42:04.801Z",
+      "updated_at": "2026-09-13T01:12:22.460Z"
+    },
+    {
+      "id": "contact-3",
+      "type": "instagram",
+      "label": "Instagram",
+      "value": "@peakdeth",
+      "icon": "📷",
+      "is_active": true,
+      "order": 2,
+      "created_at": "2026-09-12T09:42:04.801Z",
+      "updated_at": "2026-09-13T01:12:22.460Z"
+    },
+    {
+      "id": "contact-4",
+      "type": "location",
+      "label": "Studio Location",
+      "value": "Phnom Penh, Cambodia",
+      "icon": "📍",
+      "is_active": true,
+      "order": 3,
+      "created_at": "2026-09-12T09:42:04.801Z",
+      "updated_at": "2026-09-13T01:12:22.460Z"
+    },
+    {
+      "id": "contact-5",
+      "type": "website",
+      "label": "Website",
+      "value": "https://peakdeth.com",
+      "icon": "🌐",
+      "is_active": true,
+      "order": 4,
+      "created_at": "2026-09-12T09:42:04.801Z",
+      "updated_at": "2026-09-13T01:12:22.460Z"
+    }
+  ],
+  "about": {
+    "id": "about-1",
+    "title": "About Me",
+    "name": "Peak Deth",
+    "tagline": "Full-Stack Programming & Cinematic Photography Design",
+    "bio": "A multidisciplinary Full-Stack Developer and Visual Artist bridging high-performance software engineering with cinematic photography and design. Dedicated to architecting robust enterprise systems, bespoke POS solutions, and modern mobile & web apps, while capturing evocative visual narratives and crafting refined aesthetic designs.",
+    "profile_image_url": "/uploads/1789293599328_40b00457.jpg",
+    "profile_image_id": "/uploads/1789293599328_40b00457.jpg",
+    "show_on_homepage": false,
+    "is_active": true,
+    "updated_at": "2026-09-13T10:02:00.000Z"
+  }
+}

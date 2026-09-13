@@ -1,0 +1,26 @@
+import type { NextRequest } from 'next/server'
+import { updateSession } from '@/lib/supabase/middleware'
+
+export async function middleware(request: NextRequest) {
+  // Handle Supabase auth
+  const supabaseResponse = await updateSession(request)
+
+  // Add performance headers
+  supabaseResponse.headers.set('X-DNS-Prefetch-Control', 'on')
+
+  // Enable early hints for link prefetching
+  const pathname = request.nextUrl.pathname
+
+  if (pathname === '/') {
+    supabaseResponse.headers.set('Link', '</gallery>; rel=prefetch, </about>; rel=prefetch, </contact>; rel=prefetch')
+  }
+  // Note: Removed /collection prefetch as it's a dynamic route requiring [slug] parameter
+
+  return supabaseResponse
+}
+
+export const config = {
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif)$).*)',
+  ],
+}

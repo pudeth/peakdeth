@@ -1,0 +1,422 @@
+'use client'
+
+import { useState, useRef } from 'react'
+import { Button } from '@/components/ui/button'
+import { Upload, X, Loader2, Image as ImageIcon, Zap, Crop } from 'lucide-react'
+import Image from 'next/image'
+import { toast } from 'sonner'
+import imageCompression from 'browser-image-compression'
+import { ImageCropper } from '@/components/image-cropper'
+import getCroppedImg from '@/lib/crop-image'
+
+interface CloudinaryUploadResponse {
+  public_id: string
+  secure_url: string
+  width: number
+  height: number
+  format: string
+  resource_type: string
+}
+
+interface CloudinarySignatureResponse {
+  cloudName: string
+  apiKey: string
+  timestamp: number
+  signature: string
+  folder: string | null
+  isLocal?: boolean
+}
+
+interface CloudinaryUploadProps {
+  onUploadComplete: (data: {
+    image_id: string
+    image_url: string
+    image_width: number
+    image_height: number
+  }) => void
+  currentImageUrl?: string
+  currentImageId?: string
+  folder?: string
+  cropAspect?: number
+}
+
+// Compression settings - same as bulk upload
+const COMPRESSION_OPTIONS = {
+  maxSizeMB: 3,
+  maxWidthOrHeight: 4000,
+  useWebWorker: true,
+  fileType: 'image/jpeg',
+  initialQuality: 0.9
+}
+
+export function CloudinaryUpload({ onUploadComplete, currentImageUrl, currentImageId, folder, cropAspect }: CloudinaryUploadProps) {
+  const [uploading, setUploading] = useState(false)
+  const [preview, setPreview] = useState<string | null>(currentImageUrl || null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [compressionStatus, setCompressionStatus] = useState<string>('')
+  const [cropFileUrl, setCropFileUrl] = useState<string | null>(null)
+  
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const dragCounter = useRef(0)
+
+  const compressImage = async (file: File): Promise<File> => {
+    const fileSizeMB = file.size / 1024 / 1024
+
+    // If file is already small enough, don't compress
+    if (fileSizeMB <= COMPRESSION_OPTIONS.maxSizeMB) {
+      return file
+    }
+
+    try {
+      setCompressionStatus(`Compressing (${fileSizeMB.toFixed(1)}MB → ${COMPRESSION_OPTIONS.maxSizeMB}MB)...`)
+      const compressedFile = await imageCompression(file, COMPRESSION_OPTIONS)
+      setCompressionStatus('')
+      return compressedFile
+    } catch (error) {
+      console.error('Compression failed, using original:', error)
+      setCompressionStatus('')
+      return file
+    }
+  }
+
+  const uploadToCloudinary = async (file: File) => {
+    const signResponse = await fetch('/api/cloudinary/sign', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ folder }),
+    })
+
+    if (!signResponse.ok) {
+      const errJson = (await signResponse.json().catch(() => ({}))) as { error?: string }
+      throw new Error(errJson.error || 'Failed to get Cloudinary upload signature')
+    }
+
+    const signedData = (await signResponse.json()) as CloudinarySignatureResponse
+
+    const isLocal =
+      signedData.isLocal ||
+      signedData.signature === 'local' ||
+      !signedData.cloudName ||
+      signedData.cloudName.includes('placeholder')
+
+    if (isLocal) {
+      const formData = new FormData()
+      formData.append('file', file)
+      if (signedData.folder) {
+        formData.append('folder', signedData.folder)
+      }
+
+      const localResponse = await fetch('/api/cloudinary/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!localResponse.ok) {
+        const errJson = (await localResponse.json().catch(() => ({}))) as { error?: string }
+        throw new Error(errJson.error || 'Local upload failed')
+      }
+
+      return (await localResponse.json()) as CloudinaryUploadResponse
+    }
+
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('api_key', signedData.apiKey)
+    formData.append('timestamp', String(signedData.timestamp))
+    formData.append('signature', signedData.signature)
+    if (signedData.folder) {
+      formData.append('folder', signedData.folder)
+    }
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${signedData.cloudName}/image/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    )
+
+    if (!response.ok) {
+      console.warn('Cloudinary remote upload failed, falling back to local storage...')
+      try {
+        const fallbackFormData = new FormData()
+        fallbackFormData.append('file', file)
+        if (signedData.folder) fallbackFormData.append('folder', signedData.folder)
+        const fallbackRes = await fetch('/api/cloudinary/upload', {
+          method: 'POST',
+          body: fallbackFormData,
+        })
+        if (fallbackRes.ok) {
+          return (await fallbackRes.json()) as CloudinaryUploadResponse
+        }
+      } catch {}
+
+      const errText = await response.text().catch(() => '')
+      console.error('Cloudinary Error:', errText)
+      throw new Error(`Upload failed: ${errText}`)
+    }
+
+    return (await response.json()) as CloudinaryUploadResponse
+  }
+
+  const processAndUploadFile = async (file: File) => {
+    setUploading(true)
+
+    try {
+      // Compress if needed
+      const compressedFile = await compressImage(file)
+
+      // Create preview
+      const previewUrl = URL.createObjectURL(compressedFile)
+      setPreview(previewUrl)
+
+      // Upload to Cloudinary
+      const result = await uploadToCloudinary(compressedFile)
+
+      toast.success('Image uploaded successfully!')
+
+      // Pass data back to parent
+      onUploadComplete({
+        image_id: result.public_id,
+        image_url: result.secure_url,
+        image_width: result.width,
+        image_height: result.height,
+      })
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Failed to upload image. Please try again.')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type only
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    if (cropAspect) {
+      const url = URL.createObjectURL(file)
+      setCropFileUrl(url)
+    } else {
+      await processAndUploadFile(file)
+    }
+  }
+
+  const handleCropComplete = async (croppedAreaPixels: { x: number; y: number; width: number; height: number }) => {
+    if (!cropFileUrl) return
+    
+    setUploading(true)
+    try {
+      const croppedFile = await getCroppedImg(cropFileUrl, croppedAreaPixels)
+      if (croppedFile) {
+        setCropFileUrl(null)
+        await processAndUploadFile(croppedFile)
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error('Failed to crop image')
+      setUploading(false)
+    }
+  }
+
+  const handleRemove = () => {
+    setPreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current++
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current--
+    if (dragCounter.current === 0) {
+      setIsDragging(false)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    dragCounter.current = 0
+
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+
+    // Validate file type only
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    // NO size limit - we'll compress if needed!
+
+    setUploading(true)
+
+    try {
+      // Compress if needed
+      const compressedFile = await compressImage(file)
+
+      // Create preview
+      const previewUrl = URL.createObjectURL(compressedFile)
+      setPreview(previewUrl)
+
+      // Upload to Cloudinary
+      const result = await uploadToCloudinary(compressedFile)
+
+      toast.success('Image uploaded successfully!')
+
+      // Pass data back to parent
+      onUploadComplete({
+        image_id: result.public_id,
+        image_url: result.secure_url,
+        image_width: result.width,
+        image_height: result.height,
+      })
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Failed to upload image')
+      setPreview(null)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+        disabled={uploading}
+      />
+
+      {preview ? (
+        <div className="relative aspect-video w-full overflow-hidden rounded-lg border-2 border-border bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={preview}
+            alt="Preview"
+            className="w-full h-full object-contain"
+          />
+          {cropAspect && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="absolute top-2 right-12 opacity-80 hover:opacity-100 transition-opacity"
+              onClick={() => {
+                setCropFileUrl(preview)
+              }}
+              disabled={uploading}
+              title="Crop Image"
+            >
+              <Crop className="w-4 h-4" />
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            className="absolute top-2 right-2"
+            onClick={handleRemove}
+            disabled={uploading}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      ) : (
+        <div
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className={`relative flex flex-col items-center justify-center w-full aspect-video rounded-lg border-2 border-dashed transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+              isDragging
+                ? 'border-primary bg-primary/10 scale-[1.02]'
+                : 'border-border hover:border-primary/50 hover:bg-muted/50'
+            }`}
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-12 h-12 text-muted-foreground animate-spin mb-4" />
+                <p className="text-sm text-muted-foreground">
+                  {compressionStatus || 'Uploading to Cloudinary...'}
+                </p>
+              </>
+            ) : isDragging ? (
+              <>
+                <Upload className="w-12 h-12 text-primary mb-4 animate-bounce" />
+                <p className="text-sm font-medium text-primary mb-1">Drop image here!</p>
+                <p className="text-xs text-muted-foreground">Release to upload</p>
+              </>
+            ) : (
+              <>
+                <ImageIcon className="w-12 h-12 text-muted-foreground mb-4" />
+                <p className="text-sm font-medium mb-1">Drag & drop or click to upload</p>
+                <div className="flex items-center gap-2 mt-1 text-xs text-green-600">
+                  <Zap className="w-3 h-3" />
+                  <span>Auto-compression for large files</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP - any size!</p>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {currentImageId && !preview && (
+        <p className="text-xs text-muted-foreground">
+          Current: {currentImageId}
+        </p>
+      )}
+      
+      {cropFileUrl && (
+        <ImageCropper
+          imageSrc={cropFileUrl}
+          aspect={cropAspect}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setCropFileUrl(null)
+            if (fileInputRef.current) {
+              fileInputRef.current.value = ''
+            }
+          }}
+        />
+      )}
+    </div>
+  )
+}
