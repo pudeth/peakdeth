@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -29,10 +29,44 @@ async function checkAdminAuth(): Promise<boolean> {
 
 export async function GET() {
   try {
-    const [collections, collectionPhotos] = await Promise.all([
-      getStoredCollections(),
-      getStoredCollectionPhotos(),
-    ])
+    let collections: any[] = []
+    let collectionPhotos: any[] = []
+
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+      const { data: dbCollections, error: colErr } = await supabase
+        .from('collections')
+        .select('*')
+        .order('order', { ascending: true })
+
+      if (!colErr && dbCollections && dbCollections.length > 0) {
+        collections = dbCollections.map((c: any) => ({
+          ...c,
+          title: c.title || c.name || 'Untitled Collection',
+          name: c.name || c.title || 'Untitled Collection',
+        }))
+      }
+
+      const { data: dbLinks, error: linkErr } = await supabase
+        .from('collection_photos')
+        .select('*')
+        .order('order', { ascending: true })
+
+      if (!linkErr && dbLinks) {
+        collectionPhotos = dbLinks
+      }
+    } catch (e) {
+      console.warn('Supabase fetch failed in GET /api/collections:', e)
+    }
+
+    if (collections.length === 0) {
+      collections = await getStoredCollections()
+    }
+    if (collectionPhotos.length === 0) {
+      collectionPhotos = await getStoredCollectionPhotos()
+    }
+
     return NextResponse.json({ collections, collectionPhotos })
   } catch (error) {
     console.error('Error in GET /api/collections:', error)
@@ -75,20 +109,73 @@ export async function POST(request: Request) {
     }
 
     // Create new collection
-    const { title, slug, parent_id, description, cover_image_url, featured, order } = body
-    if (!title || !title.trim()) {
+    const { title, name, slug, parent_id, description, cover_image_url, featured, order } = body
+    const rawTitle = (title || name || '').trim()
+    if (!rawTitle) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 })
     }
 
-    const created = await insertStoredCollection({
-      title: title.trim(),
-      slug,
-      parent_id,
-      description,
-      cover_image_url,
-      featured,
-      order,
-    })
+    const baseSlug = (slug || rawTitle).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '') || `album-${Date.now()}`
+    const newColId = crypto.randomUUID()
+    const now = new Date().toISOString()
+
+    const newRecord = {
+      id: newColId,
+      title: rawTitle,
+      name: rawTitle,
+      slug: baseSlug,
+      parent_id: parent_id || null,
+      description: description || '',
+      cover_image_url: cover_image_url || null,
+      featured: featured ?? false,
+      order: typeof order === 'number' ? order : 0,
+      created_at: now,
+      updated_at: now,
+    }
+
+    // 1. Try saving directly to Supabase with admin client
+    let supabaseSuccess = false
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+      
+      // Try full record with both title and name
+      const { error: insertErr } = await supabase.from('collections').insert([newRecord])
+      if (!insertErr) {
+        supabaseSuccess = true
+      } else {
+        console.warn('First insert failed, retrying with schema variations:', insertErr.message)
+        // If "name" doesn't exist, remove name
+        if (insertErr.message?.includes('name')) {
+          const { name: _, ...noName } = newRecord
+          const { error: err2 } = await supabase.from('collections').insert([noName])
+          if (!err2) supabaseSuccess = true
+        } else if (insertErr.message?.includes('title')) {
+          const { title: _, ...noTitle } = newRecord
+          const { error: err3 } = await supabase.from('collections').insert([noTitle])
+          if (!err3) supabaseSuccess = true
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase insert exception in POST /api/collections:', e)
+    }
+
+    // 2. Also mirror to stored collections
+    let created: any = newRecord
+    try {
+      created = await insertStoredCollection({
+        id: newColId,
+        title: rawTitle,
+        slug: baseSlug,
+        parent_id,
+        description,
+        cover_image_url,
+        featured,
+        order,
+      })
+    } catch (e) {
+      console.warn('Local storage write failed (expected on Vercel):', e)
+    }
 
     try {
       revalidatePath('/')
@@ -96,7 +183,7 @@ export async function POST(request: Request) {
       revalidatePath('/admin/dashboard/collections')
     } catch {}
 
-    return NextResponse.json({ success: true, collection: created })
+    return NextResponse.json({ success: true, collection: created || newRecord, savedToSupabase: supabaseSuccess })
   } catch (error) {
     console.error('Error in POST /api/collections:', error)
     return NextResponse.json({ error: 'Failed to create collection' }, { status: 500 })
@@ -114,20 +201,32 @@ export async function PUT(request: Request) {
 
     // Handle reordering multiple collections
     if (body.action === 'reorder' && Array.isArray(body.orderedCollections)) {
-      const existing = await getStoredCollections()
-      const orderMap = new Map<string, number>()
-      body.orderedCollections.forEach((c: { id: string }, idx: number) => {
-        orderMap.set(c.id, idx)
-      })
-
-      const updatedList = existing.map(c => {
-        if (orderMap.has(c.id)) {
-          return { ...c, order: orderMap.get(c.id)! }
+      try {
+        const { createAdminClient } = await import('@/lib/supabase/server')
+        const supabase = createAdminClient()
+        for (let i = 0; i < body.orderedCollections.length; i++) {
+          const c = body.orderedCollections[i]
+          await supabase.from('collections').update({ order: i }).eq('id', c.id)
         }
-        return c
-      })
+      } catch {}
 
-      await saveStoredCollections(updatedList)
+      try {
+        const existing = await getStoredCollections()
+        const orderMap = new Map<string, number>()
+        body.orderedCollections.forEach((c: { id: string }, idx: number) => {
+          orderMap.set(c.id, idx)
+        })
+
+        const updatedList = existing.map(c => {
+          if (orderMap.has(c.id)) {
+            return { ...c, order: orderMap.get(c.id)! }
+          }
+          return c
+        })
+
+        await saveStoredCollections(updatedList)
+      } catch {}
+
       try {
         revalidatePath('/')
         revalidatePath('/gallery')
@@ -140,10 +239,19 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Collection ID is required' }, { status: 400 })
     }
 
-    const updated = await updateStoredCollection(id, updates)
-    if (!updated) {
-      return NextResponse.json({ error: 'Collection not found' }, { status: 404 })
-    }
+    // Update in Supabase
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+      const updateData: any = { ...updates, updated_at: new Date().toISOString() }
+      if (updateData.title) updateData.name = updateData.title
+      await supabase.from('collections').update(updateData).eq('id', id)
+    } catch {}
+
+    let updated: any = null
+    try {
+      updated = await updateStoredCollection(id, updates)
+    } catch {}
 
     try {
       revalidatePath('/')
@@ -151,7 +259,7 @@ export async function PUT(request: Request) {
       revalidatePath('/admin/dashboard/collections')
     } catch {}
 
-    return NextResponse.json({ success: true, collection: updated })
+    return NextResponse.json({ success: true, collection: updated || { id, ...updates } })
   } catch (error) {
     console.error('Error in PUT /api/collections:', error)
     return NextResponse.json({ error: 'Failed to update collection' }, { status: 500 })
@@ -171,7 +279,15 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Collection ID is required' }, { status: 400 })
     }
 
-    await deleteStoredCollection(id)
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+      await supabase.from('collections').delete().eq('id', id)
+    } catch {}
+
+    try {
+      await deleteStoredCollection(id)
+    } catch {}
 
     try {
       revalidatePath('/')

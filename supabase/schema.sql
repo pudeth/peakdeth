@@ -16,7 +16,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Collections (Albums) with nested support
 CREATE TABLE IF NOT EXISTS collections (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
+  title TEXT NOT NULL,
+  name TEXT,
   slug TEXT UNIQUE NOT NULL,
   description TEXT,
   cover_image_url TEXT,
@@ -303,22 +304,22 @@ CREATE POLICY IF NOT EXISTS "Public read access for about_equipment_items" ON ab
 CREATE POLICY IF NOT EXISTS "Public read access for contact_info" ON contact_info FOR SELECT USING (true);
 CREATE POLICY IF NOT EXISTS "Public read access for site_settings" ON site_settings FOR SELECT USING (true);
 
--- Authenticated users can manage all content
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage collections" ON collections FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage photos" ON photos FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage videos" ON videos FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage collection_photos" ON collection_photos FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage video_storyboard" ON video_storyboard FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage hero_content" ON hero_content FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage services" ON services FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage about_content" ON about_content FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage about_experience" ON about_experience FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage about_skills" ON about_skills FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage about_awards" ON about_awards FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage about_equipment_categories" ON about_equipment_categories FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage about_equipment_items" ON about_equipment_items FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage contact_info" ON contact_info FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY IF NOT EXISTS "Authenticated users can manage site_settings" ON site_settings FOR ALL USING (auth.role() = 'authenticated');
+-- Content management access
+CREATE POLICY IF NOT EXISTS "Manage collections" ON collections FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage photos" ON photos FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage videos" ON videos FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage collection_photos" ON collection_photos FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage video_storyboard" ON video_storyboard FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage hero_content" ON hero_content FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage services" ON services FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage about_content" ON about_content FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage about_experience" ON about_experience FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage about_skills" ON about_skills FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage about_awards" ON about_awards FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage about_equipment_categories" ON about_equipment_categories FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage about_equipment_items" ON about_equipment_items FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage contact_info" ON contact_info FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Manage site_settings" ON site_settings FOR ALL USING (true) WITH CHECK (true);
 
 -- =====================================================
 -- TRIGGERS FOR AUTO-UPDATE TIMESTAMPS

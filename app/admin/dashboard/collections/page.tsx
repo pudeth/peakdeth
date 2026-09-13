@@ -1130,6 +1130,7 @@ export default function CollectionsPage() {
           .from('collections')
           .insert([{
             title: newFolderName.trim(),
+            name: newFolderName.trim(),
             slug: newFolderName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, ''),
             parent_id: currentFolderId
           }])

@@ -47,3 +47,32 @@ export async function createClient() {
     }
   )
 }
+
+export function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+  const serviceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    'placeholder-anon-key'
+
+  const isPlaceholder = isPlaceholderSupabaseUrl(supabaseUrl) || serviceRoleKey.includes('placeholder')
+
+  return createServerClient(
+    supabaseUrl,
+    serviceRoleKey,
+    {
+      cookies: {
+        getAll() {
+          return []
+        },
+        setAll() {},
+      },
+      global: isPlaceholder
+        ? {
+            fetch: getMockFetch(),
+          }
+        : undefined,
+    }
+  )
+}
