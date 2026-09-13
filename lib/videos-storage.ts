@@ -6,29 +6,16 @@ import type { Video } from '@/types/database'
 const DATA_DIR = path.join(process.cwd(), 'data')
 const VIDEOS_FILE = path.join(DATA_DIR, 'videos.json')
 
-async function ensureDir() {
-  await mkdir(DATA_DIR, { recursive: true })
-}
+import { readJsonStorage, writeJsonStorage } from '@/lib/server-storage'
 
 async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
-  try {
-    let raw = await readFile(filePath, 'utf-8')
-    if (raw.charCodeAt(0) === 0xFEFF) {
-      raw = raw.slice(1)
-    }
-    return JSON.parse(raw) as T
-  } catch {
-    return fallback
-  }
+  const filename = path.basename(filePath)
+  return await readJsonStorage(filename, fallback)
 }
 
 async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
-  try {
-    await ensureDir()
-    await writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
-  } catch (error) {
-    console.error(`Failed to write JSON file ${filePath}:`, error)
-  }
+  const filename = path.basename(filePath)
+  await writeJsonStorage(filename, data)
 }
 
 function isSupabasePlaceholder(): boolean {
@@ -82,8 +69,8 @@ export async function insertStoredVideo(v: Partial<Video>): Promise<Video> {
 
   if (!isSupabasePlaceholder()) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('videos').insert([newVideo])
     } catch (e) {
       console.warn('Failed to mirror video insert to Supabase:', e)
@@ -120,8 +107,8 @@ export async function updateStoredVideo(id: string, updates: Partial<Video>): Pr
 
   if (!isSupabasePlaceholder()) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('videos').update(updatedFields).eq('id', id)
     } catch (e) {
       console.warn('Failed to mirror video update to Supabase:', e)
@@ -138,8 +125,8 @@ export async function deleteStoredVideo(id: string): Promise<boolean> {
 
   if (!isSupabasePlaceholder()) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('videos').delete().eq('id', id)
     } catch (e) {
       console.warn('Failed to mirror video delete to Supabase:', e)

@@ -27,31 +27,60 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME
+    const apiKey = process.env.CLOUDINARY_API_KEY ?? process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY
+    const apiSecret = process.env.CLOUDINARY_API_SECRET
+
+    // 1. Direct Cloudinary Upload (Recommended & Serverless-Safe)
+    if (cloudName && apiKey && apiSecret && !cloudName.includes('placeholder')) {
+      const timestamp = Math.round(Date.now() / 1000)
+      const strToSign = `timestamp=${timestamp}${apiSecret}`
+      const signature = crypto.createHash('sha1').update(strToSign).digest('hex')
+
+      const cloudinaryForm = new FormData()
+      cloudinaryForm.append('file', file)
+      cloudinaryForm.append('api_key', apiKey)
+      cloudinaryForm.append('timestamp', String(timestamp))
+      cloudinaryForm.append('signature', signature)
+
+      const cRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: 'POST',
+        body: cloudinaryForm,
+      })
+
+      if (cRes.ok) {
+        const cData = await cRes.json()
+        return NextResponse.json({
+          public_id: cData.public_id,
+          secure_url: cData.secure_url,
+          width: cData.width || 1200,
+          height: cData.height || 800,
+          format: cData.format || 'jpg',
+          resource_type: cData.resource_type || 'image',
+        })
+      } else {
+        const errText = await cRes.text()
+        console.error('Cloudinary API error:', errText)
+      }
+    }
+
+    // 2. Fallback: Base64 data URL for environments without disk or keys
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads')
-    await mkdir(uploadsDir, { recursive: true })
-
     const ext = file.name.split('.').pop() || 'jpg'
-    const safeName = `${Date.now()}_${crypto.randomBytes(4).toString('hex')}.${ext}`
-    const filePath = path.join(uploadsDir, safeName)
-
-    await writeFile(filePath, buffer)
-
-    const publicUrl = `/uploads/${safeName}`
-    const publicId = publicUrl
+    const mimeType = file.type || `image/${ext}`
+    const base64Url = `data:${mimeType};base64,${buffer.toString('base64')}`
 
     return NextResponse.json({
-      public_id: publicId,
-      secure_url: publicUrl,
+      public_id: `upload_${Date.now()}`,
+      secure_url: base64Url,
       width: 1200,
       height: 800,
       format: ext,
       resource_type: 'image',
     })
   } catch (error) {
-    console.error('Local upload error:', error)
-    return NextResponse.json({ error: 'Failed to upload image locally' }, { status: 500 })
+    console.error('Upload handler error:', error)
+    return NextResponse.json({ error: 'Failed to process image upload' }, { status: 500 })
   }
 }

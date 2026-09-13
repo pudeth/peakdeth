@@ -48,27 +48,14 @@ const DEFAULT_ABOUT: AboutContentData = {
   is_active: true,
 }
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'content.json')
+import { readJsonStorage, writeJsonStorage } from '@/lib/server-storage'
 
 async function readLocalData(): Promise<Record<string, any>> {
-  try {
-    let raw = await readFile(DATA_FILE, 'utf-8')
-    if (raw.charCodeAt(0) === 0xFEFF) {
-      raw = raw.slice(1)
-    }
-    return JSON.parse(raw)
-  } catch {
-    return {}
-  }
+  return await readJsonStorage<Record<string, any>>('content.json', {})
 }
 
 async function writeLocalData(data: Record<string, any>): Promise<void> {
-  try {
-    await mkdir(path.dirname(DATA_FILE), { recursive: true })
-    await writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8')
-  } catch (error) {
-    console.error('Failed to write local content file:', error)
-  }
+  await writeJsonStorage('content.json', data)
 }
 
 // ----------------------------------------------------------------------
@@ -81,8 +68,8 @@ export async function getHeroContent(): Promise<HeroContentData> {
 
   if (!isPlaceholder) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       const { data, error } = await supabase
         .from('hero_content')
         .select('*')
@@ -144,8 +131,8 @@ export async function saveHeroContentServer(hero: HeroContentData): Promise<Hero
 
   if (!isPlaceholder) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('hero_content').upsert({
         id: updatedHero.id,
         title: updatedHero.title,
@@ -173,8 +160,8 @@ export async function getAboutContent(): Promise<AboutContentData> {
 
   if (!isPlaceholder) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       const { data, error } = await supabase
         .from('about_content')
         .select('*')
@@ -240,8 +227,8 @@ export async function saveAboutContentServer(about: AboutContentData): Promise<A
 
   if (!isPlaceholder) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('about_content').upsert({
         id: updatedAbout.id,
         title: updatedAbout.title,
@@ -342,8 +329,8 @@ export async function getContactContent(): Promise<ContactInfoItem[]> {
 
   if (!isPlaceholder) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       const { data, error } = await supabase
         .from('contact_info')
         .select('*')
@@ -421,8 +408,8 @@ export async function saveContactItemServer(item: Partial<ContactInfoItem>): Pro
 
   if (!isPlaceholder) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('contact_info').upsert({
         id: savedItem.id,
         type: savedItem.type,
@@ -452,8 +439,8 @@ export async function deleteContactItemServer(id: string): Promise<boolean> {
 
   if (!isPlaceholder) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('contact_info').delete().eq('id', id)
     } catch (e) {
       console.warn('Failed to delete contact info from Supabase (local copy deleted):', e)
@@ -480,8 +467,8 @@ export async function updateContactStatusServer(id: string, is_active: boolean):
 
   if (!isPlaceholder) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('contact_info').update({ is_active }).eq('id', id)
     } catch (e) {
       console.warn('Failed to update contact status in Supabase (local copy updated):', e)
@@ -510,8 +497,8 @@ export async function setAllContactStatusServer(is_active: boolean): Promise<boo
 
   if (!isPlaceholder) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('contact_info').update({ is_active })
     } catch (e) {
       console.warn('Failed to batch update contact status in Supabase (local copy updated):', e)

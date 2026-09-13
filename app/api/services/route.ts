@@ -1,33 +1,17 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { readJsonStorage, writeJsonStorage } from '@/lib/server-storage'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { DEFAULT_SERVICES } from '@/lib/services'
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
-import path from 'node:path'
-
-const SERVICES_FILE = path.join(process.cwd(), 'data', 'services.json')
 
 async function readLocalServices(): Promise<any[]> {
-  try {
-    const raw = await readFile(SERVICES_FILE, 'utf-8')
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed
-    }
-    return DEFAULT_SERVICES
-  } catch {
-    return DEFAULT_SERVICES
-  }
+  const local = await readJsonStorage<any[]>('services.json', DEFAULT_SERVICES)
+  return Array.isArray(local) && local.length > 0 ? local : DEFAULT_SERVICES
 }
 
 async function writeLocalServices(data: any[]): Promise<void> {
-  try {
-    await mkdir(path.dirname(SERVICES_FILE), { recursive: true })
-    await writeFile(SERVICES_FILE, JSON.stringify(data, null, 2), 'utf-8')
-  } catch (err) {
-    console.error('Failed to write local services:', err)
-  }
+  await writeJsonStorage('services.json', data)
 }
 
 export async function GET(request: Request) {
@@ -95,8 +79,9 @@ export async function POST(request: Request) {
       await writeLocalServices(normalizedServices)
 
       try {
+        const adminSupabase = createAdminClient()
         for (const item of normalizedServices) {
-          await supabase.from('services').upsert({
+          await adminSupabase.from('services').upsert({
             id: item.id,
             number: item.number,
             title: item.title,
@@ -108,8 +93,8 @@ export async function POST(request: Request) {
             order: item.order,
           })
         }
-      } catch (e) {
-        console.warn('Supabase services sync warning (local saved):', e)
+      } catch (err) {
+        console.warn('Supabase services sync failed:', err)
       }
 
       try {

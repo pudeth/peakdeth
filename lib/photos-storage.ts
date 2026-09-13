@@ -9,29 +9,16 @@ const COLLECTIONS_FILE = path.join(DATA_DIR, 'collections.json')
 const COLLECTION_PHOTOS_FILE = path.join(DATA_DIR, 'collection_photos.json')
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads')
 
-async function ensureDir() {
-  await mkdir(DATA_DIR, { recursive: true })
-}
+import { readJsonStorage, writeJsonStorage } from '@/lib/server-storage'
 
 async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
-  try {
-    let raw = await readFile(filePath, 'utf-8')
-    if (raw.charCodeAt(0) === 0xFEFF) {
-      raw = raw.slice(1)
-    }
-    return JSON.parse(raw) as T
-  } catch {
-    return fallback
-  }
+  const filename = path.basename(filePath)
+  return await readJsonStorage(filename, fallback)
 }
 
 async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
-  try {
-    await ensureDir()
-    await writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
-  } catch (error) {
-    console.error(`Failed to write JSON file ${filePath}:`, error)
-  }
+  const filename = path.basename(filePath)
+  await writeJsonStorage(filename, data)
 }
 
 function isSupabasePlaceholder(): boolean {
@@ -120,8 +107,8 @@ export async function insertStoredPhotos(newPhotos: Partial<Photo>[]): Promise<P
   // Try mirroring to Supabase if valid
   if (!isSupabasePlaceholder()) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('photos').insert(created)
     } catch (e) {
       console.warn('Failed to mirror photos to Supabase:', e)
@@ -146,8 +133,8 @@ export async function updateStoredPhoto(id: string, updates: Partial<Photo>): Pr
 
   if (!isSupabasePlaceholder()) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('photos').update(updates).eq('id', id)
     } catch (e) {
       console.warn('Failed to mirror photo update to Supabase:', e)
@@ -170,8 +157,8 @@ export async function deleteStoredPhotos(ids: string[]): Promise<boolean> {
 
   if (!isSupabasePlaceholder()) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('photos').delete().in('id', ids)
     } catch (e) {
       console.warn('Failed to mirror photo delete to Supabase:', e)
@@ -290,8 +277,8 @@ export async function insertStoredCollection(col: Partial<Collection>): Promise<
 
   if (!isSupabasePlaceholder()) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('collections').insert([newCol])
     } catch (e) {
       console.warn('Failed to mirror collection insert to Supabase:', e)
@@ -328,8 +315,8 @@ export async function updateStoredCollection(id: string, updates: Partial<Collec
 
   if (!isSupabasePlaceholder()) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('collections').update(updatedFields).eq('id', id)
     } catch (e) {
       console.warn('Failed to mirror collection update to Supabase:', e)
@@ -365,8 +352,8 @@ export async function deleteStoredCollection(id: string): Promise<boolean> {
 
   if (!isSupabasePlaceholder()) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('collections').delete().in('id', Array.from(toDelete))
     } catch (e) {
       console.warn('Failed to mirror collection delete to Supabase:', e)
@@ -413,8 +400,8 @@ export async function linkStoredPhotosToCollection(
 
   if (!isSupabasePlaceholder() && created.length > 0) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       await supabase.from('collection_photos').insert(
         created.map(c => ({
           collection_id: c.collection_id,
@@ -447,8 +434,8 @@ export async function unlinkStoredPhotos(collection_id: string, photo_ids?: stri
 
   if (!isSupabasePlaceholder()) {
     try {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
       let query = supabase.from('collection_photos').delete().eq('collection_id', collection_id)
       if (photo_ids && photo_ids.length > 0) {
         query = query.in('photo_id', photo_ids)
