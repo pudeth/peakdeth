@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +35,17 @@ import {
   Star,
   Globe,
   User,
+  Edit3,
+  Sliders,
+  Smartphone,
+  CreditCard,
+  Lock,
+  RefreshCw,
+  Layers,
+  Maximize2,
+  Laptop,
+  Tablet,
+  ImageIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import NextImage from 'next/image'
@@ -67,9 +78,12 @@ interface CollectionItem {
   title: string
   slug: string
   cover_image_url?: string | null
+  parent_id?: string | null
   is_featured: boolean
+  featured: boolean
   is_active: boolean
   photos_count?: number
+  sub_albums_count?: number
 }
 
 interface VideoItem {
@@ -95,6 +109,53 @@ interface AboutData {
   show_on_homepage?: boolean
 }
 
+const DEFAULT_SERVICES_PRESETS: ServiceItem[] = [
+  {
+    id: 'service-1',
+    number: 1,
+    title: 'POS',
+    description: 'Point of sale software with real-time inventory tracking, smart billing, payments, and sales analytics.',
+    icon: 'pos',
+    link: 'https://weppage-1.onrender.com/home.html',
+    show_on_homepage: true,
+    is_active: true,
+    order: 0,
+  },
+  {
+    id: 'service-2',
+    number: 2,
+    title: 'Top-Up Diamond',
+    description: 'Mobile Legends Bang Bang diamond top-up platform with instant account validation and automated payments.',
+    icon: 'diamond',
+    link: 'https://mlbb-topup-jet.vercel.app/',
+    show_on_homepage: true,
+    is_active: true,
+    order: 1,
+  },
+  {
+    id: 'service-3',
+    number: 3,
+    title: 'Web-APP',
+    description: 'Smartphone & digital electronics store e-commerce management system, modern responsive web application.',
+    icon: 'web',
+    link: 'https://dymaly-store.onrender.com',
+    show_on_homepage: true,
+    is_active: true,
+    order: 2,
+  },
+  {
+    id: 'service-4',
+    number: 4,
+    title: 'Mobile App & Custom System',
+    description: 'Cross-platform iOS & Android mobile development, specialized business dashboards, and custom software systems.',
+    icon: 'mobile',
+    link: '/demo/mobile',
+    show_on_homepage: true,
+    is_active: true,
+    order: 3,
+  },
+]
+
 export default function ManageHomepagePage() {
   const supabase = createClient()
 
@@ -102,6 +163,8 @@ export default function ManageHomepagePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [revalidating, setRevalidating] = useState(false)
+  const [activeTab, setActiveTab] = useState('hero')
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
 
   // Hero state
   const [hero, setHero] = useState<HeroData>({
@@ -125,18 +188,21 @@ export default function ManageHomepagePage() {
 
   // Services state
   const [services, setServices] = useState<ServiceItem[]>([])
+  const [editingService, setEditingService] = useState<ServiceItem | null>(null)
   const [isAddingService, setIsAddingService] = useState(false)
   const [newService, setNewService] = useState<Partial<ServiceItem>>({
     title: '',
     description: '',
     icon: 'pos',
     link: '',
+    show_on_homepage: true,
     is_active: true,
   })
 
   // Collections state
   const [collections, setCollections] = useState<CollectionItem[]>([])
   const [albumSearch, setAlbumSearch] = useState('')
+  const [albumFilter, setAlbumFilter] = useState<'all' | 'main' | 'sub'>('all')
 
   // Videos state
   const [videos, setVideos] = useState<VideoItem[]>([])
@@ -186,14 +252,20 @@ export default function ManageHomepagePage() {
                 description: s.description || '',
                 icon: s.icon || 'pos',
                 link: s.link || '',
+                show_on_homepage: s.show_on_homepage !== false,
                 is_active: s.is_active ?? true,
-                order: Number(s.order) || idx,
+                order: Number(s.order !== undefined ? s.order : idx),
               }))
             )
+          } else {
+            setServices(DEFAULT_SERVICES_PRESETS)
           }
+        } else {
+          setServices(DEFAULT_SERVICES_PRESETS)
         }
       } catch (e) {
         console.warn('Failed to load services from API:', e)
+        setServices(DEFAULT_SERVICES_PRESETS)
       }
 
       // 3. Load Collections
@@ -202,7 +274,42 @@ export default function ManageHomepagePage() {
         if (collectionsRes.ok) {
           const colJson = await collectionsRes.json()
           if (Array.isArray(colJson.collections)) {
-            setCollections(colJson.collections)
+            const raw = colJson.collections
+            const links = Array.isArray(colJson.collectionPhotos) ? colJson.collectionPhotos : []
+
+            // Photo counts per collection
+            const countMap = new Map<string, number>()
+            for (const l of links) {
+              if (l.collection_id) {
+                countMap.set(l.collection_id, (countMap.get(l.collection_id) || 0) + 1)
+              }
+            }
+
+            // Sub-albums count per collection
+            const subCountMap = new Map<string, number>()
+            for (const c of raw) {
+              if (c.parent_id) {
+                subCountMap.set(c.parent_id, (subCountMap.get(c.parent_id) || 0) + 1)
+              }
+            }
+
+            setCollections(
+              raw.map((c: any) => {
+                const isFeaturedVal = Boolean(c.featured ?? c.is_featured)
+                return {
+                  id: c.id,
+                  title: c.title || c.name || 'Untitled Album',
+                  slug: c.slug || '',
+                  cover_image_url: c.cover_image_url || null,
+                  parent_id: c.parent_id || null,
+                  is_featured: isFeaturedVal,
+                  featured: isFeaturedVal,
+                  is_active: c.is_active ?? true,
+                  photos_count: countMap.get(c.id) ?? (c.photos_count || 0),
+                  sub_albums_count: subCountMap.get(c.id) || 0,
+                }
+              })
+            )
           }
         }
       } catch (e) {
@@ -255,27 +362,6 @@ export default function ManageHomepagePage() {
     loadData()
   }, [loadData])
 
-  // Save About Profile changes
-  const handleSaveAbout = async (updatedAbout?: AboutData) => {
-    const dataToSave = updatedAbout || about
-    try {
-      setSaving(true)
-      const res = await fetch('/api/content/about', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSave),
-      })
-
-      if (!res.ok) throw new Error('Failed to save About Profile')
-      if (updatedAbout) setAbout(updatedAbout)
-      toast.success('About Profile saved successfully')
-    } catch (error: any) {
-      toast.error(error.message || 'Error saving about profile')
-    } finally {
-      setSaving(false)
-    }
-  }
-
   // Save Hero changes
   const handleSaveHero = async () => {
     try {
@@ -307,7 +393,7 @@ export default function ManageHomepagePage() {
       })
 
       if (!res.ok) throw new Error('Failed to save services')
-      toast.success('Services updated successfully')
+      toast.success('Developer Live Systems updated successfully')
     } catch (error: any) {
       toast.error(error.message || 'Error saving services')
     } finally {
@@ -318,7 +404,7 @@ export default function ManageHomepagePage() {
   // Add new service
   const handleAddService = async () => {
     if (!newService.title?.trim()) {
-      toast.error('Please enter a service title')
+      toast.error('Please enter a system title')
       return
     }
 
@@ -329,6 +415,7 @@ export default function ManageHomepagePage() {
       description: (newService.description || '').trim(),
       icon: newService.icon || 'pos',
       link: newService.link ? newService.link.trim() : null,
+      show_on_homepage: newService.show_on_homepage ?? true,
       is_active: newService.is_active ?? true,
       order: services.length,
     }
@@ -336,30 +423,79 @@ export default function ManageHomepagePage() {
     const updated = [...services, item]
     setServices(updated)
     setIsAddingService(false)
-    setNewService({ title: '', description: '', icon: 'pos', link: '', is_active: true })
+    setNewService({ title: '', description: '', icon: 'pos', link: '', show_on_homepage: true, is_active: true })
+    await handleSaveServices(updated)
+  }
+
+  // Update existing service
+  const handleUpdateService = async (service: ServiceItem) => {
+    const updated = services.map(s => (s.id === service.id || s._id === service._id ? service : s))
+    setServices(updated)
+    setEditingService(null)
     await handleSaveServices(updated)
   }
 
   // Delete service
   const handleDeleteService = async (id?: string) => {
     if (!id) return
-    const updated = services.filter(s => (s.id !== id && s._id !== id))
+    const updated = services.filter(s => s.id !== id && s._id !== id)
     setServices(updated)
     await handleSaveServices(updated)
   }
 
+  // Reset to default 4 production services
+  const handleResetDefaultServices = async () => {
+    setServices(DEFAULT_SERVICES_PRESETS)
+    await handleSaveServices(DEFAULT_SERVICES_PRESETS)
+    toast.success('Reset to 4 default production systems')
+  }
+
+  // Save About Profile changes
+  const handleSaveAbout = async (updatedAbout?: AboutData) => {
+    const dataToSave = updatedAbout || about
+    try {
+      setSaving(true)
+      const res = await fetch('/api/content/about', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToSave),
+      })
+
+      if (!res.ok) throw new Error('Failed to save About Profile')
+      if (updatedAbout) setAbout(updatedAbout)
+      toast.success('About Profile saved successfully')
+    } catch (error: any) {
+      toast.error(error.message || 'Error saving about profile')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // Toggle collection featured status
   const handleToggleCollectionFeatured = async (collectionId: string, currentFeatured: boolean) => {
-    const updated = collections.map(c => c.id === collectionId ? { ...c, is_featured: !currentFeatured } : c)
+    const newFeatured = !currentFeatured
+    const updated = collections.map(c =>
+      c.id === collectionId ? { ...c, is_featured: newFeatured, featured: newFeatured } : c
+    )
     setCollections(updated)
 
     try {
-      await supabase
-        .from('collections')
-        .update({ is_featured: !currentFeatured })
-        .eq('id', collectionId)
+      // 1. Try updating via API endpoint with admin privileges
+      const res = await fetch('/api/collections', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: collectionId, featured: newFeatured }),
+      })
 
-      toast.success(!currentFeatured ? 'Album pinned to Homepage' : 'Album removed from Homepage')
+      if (!res.ok) {
+        // Fallback directly to supabase client
+        await supabase
+          .from('collections')
+          .update({ featured: newFeatured })
+          .eq('id', collectionId)
+      }
+
+      toast.success(newFeatured ? 'Album pinned to Homepage' : 'Album unpinned from Homepage')
     } catch {
       toast.error('Failed to update album status')
     }
@@ -367,7 +503,7 @@ export default function ManageHomepagePage() {
 
   // Toggle video featured status
   const handleToggleVideoFeatured = async (videoId: string, currentFeatured: boolean) => {
-    const updated = videos.map(v => v.id === videoId ? { ...v, featured: !currentFeatured } : v)
+    const updated = videos.map(v => (v.id === videoId ? { ...v, featured: !currentFeatured } : v))
     setVideos(updated)
 
     try {
@@ -399,48 +535,67 @@ export default function ManageHomepagePage() {
     }
   }
 
+  // Filter collections
+  const filteredAlbums = useMemo(() => {
+    return collections.filter(c => {
+      const matchesSearch = c.title.toLowerCase().includes(albumSearch.toLowerCase())
+      if (!matchesSearch) return false
+      if (albumFilter === 'main') return !c.parent_id
+      if (albumFilter === 'sub') return Boolean(c.parent_id)
+      return true
+    })
+  }, [collections, albumSearch, albumFilter])
+
+  // Filter videos
+  const filteredVideos = useMemo(() => {
+    return videos.filter(
+      v =>
+        v.title.toLowerCase().includes(videoSearch.toLowerCase()) ||
+        (v.category && v.category.toLowerCase().includes(videoSearch.toLowerCase()))
+    )
+  }, [videos, videoSearch])
+
+  // Stat counts
+  const mainAlbums = useMemo(() => collections.filter(c => !c.parent_id), [collections])
+  const featuredAlbumsCount = useMemo(
+    () => collections.filter(c => !c.parent_id && (c.featured || c.is_featured)).length,
+    [collections]
+  )
+  const featuredVideosCount = useMemo(() => videos.filter(v => v.featured).length, [videos])
+  const activeServicesCount = useMemo(
+    () => services.filter(s => s.is_active && s.show_on_homepage !== false).length,
+    [services]
+  )
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-          <p className="text-sm text-zinc-400">Loading Homepage Manager...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+          <p className="text-sm font-mono text-zinc-400">Loading Homepage Control Center...</p>
         </div>
       </div>
     )
   }
 
-  const filteredAlbums = collections.filter(c =>
-    c.title.toLowerCase().includes(albumSearch.toLowerCase())
-  )
-
-  const filteredVideos = videos.filter(v =>
-    v.title.toLowerCase().includes(videoSearch.toLowerCase()) ||
-    (v.category && v.category.toLowerCase().includes(videoSearch.toLowerCase()))
-  )
-
-  const featuredAlbumsCount = collections.filter(c => c.is_featured).length
-  const featuredVideosCount = videos.filter(v => v.featured).length
-  const activeServicesCount = services.filter(s => s.is_active).length
-
   return (
-    <div className="space-y-8 max-w-7xl pb-20">
+    <div className="space-y-8 max-w-7xl pb-24">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/10">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <Home className="w-5 h-5 text-blue-400" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Home className="w-5 h-5 text-emerald-400" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
               Homepage Control Center
             </h1>
-            <Badge variant="secondary" className="bg-blue-500/15 text-blue-400 border-blue-500/30 text-xs">
-              Live Management
+            <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-xs">
+              Live Production
             </Badge>
           </div>
           <p className="text-sm text-zinc-400">
-            Configure and update all sections of your homepage: Hero visuals, developer live systems, featured albums, and motion films.
+            Configure every interface layer of your landing page: Hero visuals, developer live systems, about narrative, curated photo albums, and video reels.
           </p>
         </div>
 
@@ -464,7 +619,7 @@ export default function ManageHomepagePage() {
           >
             <Link href="/" target="_blank" className="flex items-center gap-2">
               <Globe className="w-4 h-4 text-emerald-400" />
-              <span>View Live Homepage</span>
+              <span>Open Live Homepage</span>
               <ExternalLink className="w-3.5 h-3.5 opacity-60" />
             </Link>
           </Button>
@@ -473,84 +628,122 @@ export default function ManageHomepagePage() {
 
       {/* Quick Status Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 flex flex-col justify-between">
-          <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Hero Status</span>
-          <span className="text-lg font-bold text-white mt-1">
+        <div
+          onClick={() => setActiveTab('hero')}
+          className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 hover:border-white/20 transition-all cursor-pointer flex flex-col justify-between"
+        >
+          <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Hero Section</span>
+          <span className="text-base sm:text-lg font-bold text-white mt-1 truncate">
             {hero.title || 'PEAK DETH'}
           </span>
           <span className="text-[11px] text-emerald-400 flex items-center gap-1 mt-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Production Ready
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active Optic
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 flex flex-col justify-between">
-          <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Developer Live Systems</span>
-          <span className="text-lg font-bold text-white mt-1">
-            {activeServicesCount} Active
+        <div
+          onClick={() => setActiveTab('services')}
+          className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 hover:border-white/20 transition-all cursor-pointer flex flex-col justify-between"
+        >
+          <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Developer Systems</span>
+          <span className="text-base sm:text-lg font-bold text-white mt-1">
+            {activeServicesCount}/4 Active
           </span>
           <span className="text-[11px] text-zinc-400 mt-1">
-            {services.length} Total Systems
+            {services.length} Registered Nodes
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 flex flex-col justify-between">
+        <div
+          onClick={() => setActiveTab('about')}
+          className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 hover:border-white/20 transition-all cursor-pointer flex flex-col justify-between"
+        >
           <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">About Profile</span>
-          <span className="text-lg font-bold text-white mt-1">
+          <span className="text-base sm:text-lg font-bold text-white mt-1">
             {about.show_on_homepage ? 'Displayed' : 'Hidden'}
           </span>
           <span className={`text-[11px] flex items-center gap-1 mt-1 ${about.show_on_homepage ? 'text-emerald-400' : 'text-zinc-500'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${about.show_on_homepage ? 'bg-emerald-500' : 'bg-zinc-600'}`} />
-            {about.show_on_homepage ? 'Active on Home' : 'Hidden from Home'}
+            {about.show_on_homepage ? 'Live Section' : 'Disabled'}
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 flex flex-col justify-between">
-          <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Featured Albums</span>
-          <span className="text-lg font-bold text-white mt-1">
-            {featuredAlbumsCount} on Homepage
+        <div
+          onClick={() => setActiveTab('albums')}
+          className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 hover:border-white/20 transition-all cursor-pointer flex flex-col justify-between"
+        >
+          <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Main Albums</span>
+          <span className="text-base sm:text-lg font-bold text-white mt-1">
+            {mainAlbums.length} Main Categories
           </span>
           <span className="text-[11px] text-zinc-400 mt-1">
-            {collections.length} Total Albums
+            {collections.length} Total Collections
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 flex flex-col justify-between">
-          <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Featured Videos</span>
-          <span className="text-lg font-bold text-white mt-1">
-            {featuredVideosCount} on Homepage
+        <div
+          onClick={() => setActiveTab('videos')}
+          className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 hover:border-white/20 transition-all cursor-pointer flex flex-col justify-between"
+        >
+          <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Cinema Videos</span>
+          <span className="text-base sm:text-lg font-bold text-white mt-1">
+            {featuredVideosCount} Featured
           </span>
           <span className="text-[11px] text-zinc-400 mt-1">
-            {videos.length} Total Videos
+            {videos.length} Total Reels
           </span>
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="hero" className="space-y-6">
-        <TabsList className="bg-zinc-900/80 p-1 rounded-2xl border border-white/10 w-full sm:w-auto flex flex-wrap h-auto gap-1">
-          <TabsTrigger value="hero" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2">
+      {/* Main Tabs Layout */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-zinc-900/90 p-1.5 rounded-2xl border border-white/10 w-full sm:w-auto flex flex-wrap h-auto gap-1">
+          <TabsTrigger
+            value="hero"
+            className="rounded-xl data-[state=active]:bg-emerald-500 data-[state=active]:text-black font-semibold text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2 transition-all"
+          >
             <Sparkles className="w-4 h-4" />
             <span>1. Hero Section</span>
           </TabsTrigger>
 
-          <TabsTrigger value="services" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2">
+          <TabsTrigger
+            value="services"
+            className="rounded-xl data-[state=active]:bg-emerald-500 data-[state=active]:text-black font-semibold text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2 transition-all"
+          >
             <Code2 className="w-4 h-4" />
             <span>2. Developer Systems ({activeServicesCount})</span>
           </TabsTrigger>
 
-          <TabsTrigger value="about" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2">
+          <TabsTrigger
+            value="about"
+            className="rounded-xl data-[state=active]:bg-emerald-500 data-[state=active]:text-black font-semibold text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2 transition-all"
+          >
             <User className="w-4 h-4" />
             <span>3. About Profile ({about.show_on_homepage ? 'Active' : 'Off'})</span>
           </TabsTrigger>
 
-          <TabsTrigger value="albums" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2">
+          <TabsTrigger
+            value="albums"
+            className="rounded-xl data-[state=active]:bg-emerald-500 data-[state=active]:text-black font-semibold text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2 transition-all"
+          >
             <Camera className="w-4 h-4" />
-            <span>4. Featured Albums ({featuredAlbumsCount})</span>
+            <span>4. Main Albums ({mainAlbums.length})</span>
           </TabsTrigger>
 
-          <TabsTrigger value="videos" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2">
+          <TabsTrigger
+            value="videos"
+            className="rounded-xl data-[state=active]:bg-emerald-500 data-[state=active]:text-black font-semibold text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2 transition-all"
+          >
             <Film className="w-4 h-4" />
-            <span>5. Featured Videos ({featuredVideosCount})</span>
+            <span>5. Cinema & Videos ({featuredVideosCount})</span>
+          </TabsTrigger>
+
+          <TabsTrigger
+            value="preview"
+            className="rounded-xl data-[state=active]:bg-cyan-500 data-[state=active]:text-black font-semibold text-xs sm:text-sm py-2 px-3.5 flex items-center gap-2 transition-all ml-auto"
+          >
+            <Eye className="w-4 h-4" />
+            <span>Interactive Live View</span>
           </TabsTrigger>
         </TabsList>
 
@@ -560,8 +753,8 @@ export default function ManageHomepagePage() {
             {/* Hero Form */}
             <Card className="lg:col-span-7 bg-zinc-950/80 border-white/10 shadow-xl rounded-3xl">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-blue-400" />
+                <CardTitle className="text-lg flex items-center gap-2 text-white">
+                  <Sparkles className="w-5 h-5 text-emerald-400" />
                   <span>Hero Visuals & Text</span>
                 </CardTitle>
                 <CardDescription>
@@ -604,10 +797,10 @@ export default function ManageHomepagePage() {
                   <Label className="text-xs uppercase font-semibold text-zinc-400">
                     Hero Background Image (Optional Full-Screen Optic)
                   </Label>
-                  
+
                   <div className="flex items-center gap-3">
                     <CloudinaryUpload
-                      onUploadComplete={(result) => {
+                      onUploadComplete={result => {
                         setHero(prev => ({
                           ...prev,
                           background_image_url: result.image_url,
@@ -624,7 +817,9 @@ export default function ManageHomepagePage() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => setHero(prev => ({ ...prev, background_image_url: null, background_image_id: null }))}
+                        onClick={() =>
+                          setHero(prev => ({ ...prev, background_image_url: null, background_image_id: null }))
+                        }
                         className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl h-10"
                       >
                         <Trash2 className="w-4 h-4 mr-1.5" /> Remove Image
@@ -667,7 +862,7 @@ export default function ManageHomepagePage() {
                   <Button
                     onClick={handleSaveHero}
                     disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg px-6 h-11"
+                    className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-xl shadow-lg px-6 h-11"
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                     <span>Save Hero Section</span>
@@ -679,12 +874,16 @@ export default function ManageHomepagePage() {
             {/* Live Mockup Preview */}
             <div className="lg:col-span-5 space-y-4">
               <Card className="bg-black border-white/15 shadow-2xl rounded-3xl overflow-hidden sticky top-8">
-                <div className="p-3 bg-zinc-950 border-b border-white/10 flex items-center justify-between text-xs text-zinc-400">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    Live Hero Mockup Preview
+                <div className="p-3.5 bg-zinc-950 border-b border-white/10 flex items-center justify-between text-xs text-zinc-400">
+                  <span className="flex items-center gap-2 font-mono">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    LIVE HERO PREVIEW
                   </span>
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-500">Viewport</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500/80" />
+                    <span className="w-2 h-2 rounded-full bg-amber-500/80" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-500/80" />
+                  </div>
                 </div>
 
                 <div className="relative aspect-[16/11] w-full flex flex-col justify-center items-center p-6 text-center overflow-hidden bg-zinc-950">
@@ -699,7 +898,7 @@ export default function ManageHomepagePage() {
 
                   {/* Dark overlay */}
                   <div
-                    className="absolute inset-0 bg-black"
+                    className="absolute inset-0 bg-black pointer-events-none"
                     style={{ opacity: hero.overlay_opacity }}
                   />
 
@@ -728,6 +927,14 @@ export default function ManageHomepagePage() {
                     </div>
                   </div>
                 </div>
+
+                <div className="p-3 bg-zinc-950/80 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                  <span>SCALE: 1:1 SCALED</span>
+                  <Link href="/" target="_blank" className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                    <span>Preview Live</span>
+                    <ArrowUpRight className="w-3 h-3" />
+                  </Link>
+                </div>
               </Card>
             </div>
           </div>
@@ -735,177 +942,321 @@ export default function ManageHomepagePage() {
 
         {/* TAB 2: DEVELOPER & LIVE SYSTEMS */}
         <TabsContent value="services" className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Code2 className="w-5 h-5 text-blue-400" />
-                <span>Developer Systems & Live Demos</span>
-              </h2>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                These interactive software cards appear on the Homepage and in the Developer (Coding) view with live iframe previews.
-              </p>
+          {/* Cluster Telemetry Ribbon */}
+          <div className="px-4 py-3 rounded-2xl bg-zinc-950/90 border border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+            <div className="flex items-center gap-3 text-emerald-400">
+              <span className="flex items-center gap-1.5 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                SYSTEM CLUSTER STATUS: {activeServicesCount}/4 ONLINE
+              </span>
+              <span className="text-zinc-600 hidden md:inline">•</span>
+              <span className="text-zinc-400 hidden md:inline">ROUTING: EDGE REVERSE PROXY</span>
             </div>
 
-            <Button
-              onClick={() => setIsAddingService(true)}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-md self-start"
-            >
-              <Plus className="w-4 h-4 mr-1.5" /> Add New System
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetDefaultServices}
+                className="bg-zinc-900 border-white/10 text-xs h-8 rounded-xl text-zinc-300 hover:text-white"
+              >
+                <RefreshCw className="w-3 h-3 mr-1.5" />
+                <span>Reset 4 Production Presets</span>
+              </Button>
+
+              <Button
+                onClick={() => setIsAddingService(true)}
+                size="sm"
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs h-8 rounded-xl shadow-md"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Node
+              </Button>
+            </div>
           </div>
 
-          {/* Add Service Modal / Inline Card */}
-          {isAddingService && (
-            <Card className="bg-zinc-950 border-blue-500/30 rounded-3xl p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between">
+          {/* Add / Edit Service Form */}
+          {(isAddingService || editingService) && (
+            <Card className="bg-zinc-950 border-emerald-500/40 rounded-3xl p-6 space-y-4 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-blue-400" /> Add New Live System
+                  <Edit3 className="w-4 h-4 text-emerald-400" />
+                  {editingService ? `Edit Node #${String(editingService.number).padStart(2, '0')}: ${editingService.title}` : 'Add New System Node'}
                 </h3>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsAddingService(false)}
+                  onClick={() => {
+                    setIsAddingService(false)
+                    setEditingService(null)
+                  }}
                   className="text-zinc-400 hover:text-white"
                 >
                   Cancel
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-zinc-400">System Title</Label>
-                  <Input
-                    value={newService.title}
-                    onChange={e => setNewService(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="e.g. POS Billing & Inventory"
-                    className="bg-zinc-900 border-white/10 rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-zinc-400">Interactive Live Demo URL</Label>
-                  <Input
-                    value={newService.link || ''}
-                    onChange={e => setNewService(prev => ({ ...prev, link: e.target.value }))}
-                    placeholder="https://your-demo-app.vercel.app"
-                    className="bg-zinc-900 border-white/10 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Description</Label>
-                <Textarea
-                  value={newService.description}
-                  onChange={e => setNewService(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Describe the system capabilities, tech stack, and benefits..."
-                  rows={2}
-                  className="bg-zinc-900 border-white/10 rounded-xl"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsAddingService(false)}
-                  className="rounded-xl"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAddService}
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl"
-                >
-                  Save System
-                </Button>
-              </div>
-            </Card>
-          )}
-
-          {/* List of Services */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {services.map((service, idx) => (
-              <Card
-                key={service.id || service._id || idx}
-                className={`bg-zinc-950/80 border-white/10 rounded-3xl p-5 space-y-4 hover:border-white/20 transition-all duration-300 ${!service.is_active ? 'opacity-50' : ''}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">
-                      {service.number || idx + 1}
+              {editingService ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-zinc-400">Node Number</Label>
+                      <Input
+                        type="number"
+                        value={editingService.number}
+                        onChange={e => setEditingService({ ...editingService, number: Number(e.target.value) || 1 })}
+                        className="bg-zinc-900 border-white/10 rounded-xl font-mono"
+                      />
                     </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white tracking-tight">
-                        {service.title}
-                      </h3>
-                      {service.link ? (
-                        <p className="text-xs text-blue-400 truncate max-w-xs flex items-center gap-1 mt-0.5">
-                          <Globe className="w-3 h-3 shrink-0" />
-                          <span>{service.link}</span>
-                        </p>
-                      ) : (
-                        <span className="text-[11px] text-zinc-500">No live link</span>
-                      )}
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs text-zinc-400">System Title</Label>
+                      <Input
+                        value={editingService.title}
+                        onChange={e => setEditingService({ ...editingService, title: e.target.value })}
+                        placeholder="POS, Top-Up Diamond, Web-APP..."
+                        className="bg-zinc-900 border-white/10 rounded-xl font-semibold"
+                      />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="text-[10px] text-zinc-400 font-medium">Homepage</span>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-zinc-400">Interactive Preview URL</Label>
+                    <Input
+                      value={editingService.link || ''}
+                      onChange={e => setEditingService({ ...editingService, link: e.target.value })}
+                      placeholder="https://weppage-1.onrender.com/home.html or /demo/mobile"
+                      className="bg-zinc-900 border-white/10 rounded-xl font-mono text-xs text-cyan-300"
+                    />
+                    <div className="flex flex-wrap gap-2 pt-1 text-[10px] font-mono">
+                      <span className="text-zinc-500">Quick Presets:</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditingService({ ...editingService, link: 'https://weppage-1.onrender.com/home.html' })}
+                        className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-zinc-300"
+                      >
+                        POS (Grocery)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingService({ ...editingService, link: 'https://mlbb-topup-jet.vercel.app/' })}
+                        className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-zinc-300"
+                      >
+                        MLBB Diamond
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingService({ ...editingService, link: 'https://dymaly-store.onrender.com' })}
+                        className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-zinc-300"
+                      >
+                        Web-APP Store
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingService({ ...editingService, link: '/demo/mobile' })}
+                        className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-zinc-300"
+                      >
+                        /demo/mobile
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-zinc-400">Description</Label>
+                    <Textarea
+                      value={editingService.description}
+                      onChange={e => setEditingService({ ...editingService, description: e.target.value })}
+                      rows={2}
+                      className="bg-zinc-900 border-white/10 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                    <div className="flex items-center gap-2">
                       <Switch
-                        checked={service.show_on_homepage !== false}
-                        onCheckedChange={(checked) => {
-                          const updated = services.map(s => (s.id === service.id || s._id === service._id) ? { ...s, show_on_homepage: checked } : s)
-                          setServices(updated)
-                          handleSaveServices(updated)
-                        }}
-                        title={service.show_on_homepage !== false ? 'Shown on Homepage' : 'Hidden from Homepage'}
+                        checked={editingService.show_on_homepage !== false}
+                        onCheckedChange={checked => setEditingService({ ...editingService, show_on_homepage: checked })}
+                      />
+                      <span className="text-xs text-zinc-300">Show on Homepage</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingService(null)}
+                        className="rounded-xl"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleUpdateService(editingService)}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-xl"
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-zinc-400">System Title</Label>
+                      <Input
+                        value={newService.title}
+                        onChange={e => setNewService(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="e.g. POS Billing & Inventory"
+                        className="bg-zinc-900 border-white/10 rounded-xl"
                       />
                     </div>
 
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-zinc-400">Interactive Live Demo URL</Label>
+                      <Input
+                        value={newService.link || ''}
+                        onChange={e => setNewService(prev => ({ ...prev, link: e.target.value }))}
+                        placeholder="https://your-demo.vercel.app or /demo/mobile"
+                        className="bg-zinc-900 border-white/10 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-zinc-400">Description</Label>
+                    <Textarea
+                      value={newService.description}
+                      onChange={e => setNewService(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Describe system capabilities, stack, and features..."
+                      rows={2}
+                      className="bg-zinc-900 border-white/10 rounded-xl"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDeleteService(service.id || service._id)}
-                      className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl h-8 w-8 p-0"
+                      onClick={() => setIsAddingService(false)}
+                      className="rounded-xl"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAddService}
+                      size="sm"
+                      className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-xl"
+                    >
+                      Create Node
                     </Button>
                   </div>
                 </div>
+              )}
+            </Card>
+          )}
 
-                <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2">
-                  {service.description}
-                </p>
-
-                {service.link && (
-                  <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setPreviewUrl(service.link || null)
-                        setPreviewTitle(service.title)
-                      }}
-                      className="text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-xl h-8 px-2.5 flex items-center gap-1.5"
-                    >
-                      <MonitorPlay className="w-3.5 h-3.5" />
-                      <span>Test Live Preview</span>
-                    </Button>
-
-                    <Link
-                      href={service.link}
-                      target="_blank"
-                      className="text-xs text-zinc-400 hover:text-white flex items-center gap-1"
-                    >
-                      <span>Open site</span>
-                      <ArrowUpRight className="w-3 h-3" />
-                    </Link>
+          {/* 4 Cards Grid - Styled exactly like the Homepage Developer Window */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {services.map((service, idx) => (
+              <Card
+                key={service.id || service._id || idx}
+                className={`bg-zinc-950 border-white/10 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between hover:border-white/25 transition-all duration-300 ${!service.is_active || service.show_on_homepage === false ? 'opacity-60' : ''}`}
+              >
+                {/* Browser Titlebar */}
+                <div className="px-3.5 py-2.5 bg-zinc-900/90 border-b border-white/10 flex items-center justify-between text-xs select-none">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
                   </div>
-                )}
+
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-950 border border-white/10 text-[10px] font-mono text-zinc-400 max-w-[130px] truncate">
+                    <Lock className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                    <span className="truncate">
+                      {service.link
+                        ? (service.link.startsWith('/') ? 'mobile-app.peakdeth.com' : service.link.replace(/^https?:\/\//, '').replace(/\/$/, ''))
+                        : service.title}
+                    </span>
+                  </div>
+
+                  <span className="font-mono text-[10px] font-bold text-white px-1.5 py-0.5 rounded bg-zinc-800 border border-white/10">
+                    {String(service.number || idx + 1).padStart(2, '0')}
+                  </span>
+                </div>
+
+                {/* Body */}
+                <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <h3 className="text-sm font-bold text-white truncate">
+                        {service.title}
+                      </h3>
+                      {service.show_on_homepage !== false ? (
+                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          ON HOME
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded border border-white/5">
+                          HIDDEN
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-zinc-400 leading-relaxed line-clamp-3">
+                      {service.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-white/5 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[11px] font-mono text-zinc-500">Show on Home:</span>
+                      <Switch
+                        checked={service.show_on_homepage !== false}
+                        onCheckedChange={checked => {
+                          const updated = services.map(s =>
+                            s.id === service.id || s._id === service._id ? { ...s, show_on_homepage: checked } : s
+                          )
+                          setServices(updated)
+                          handleSaveServices(updated)
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingService(service)}
+                        className="bg-zinc-900 border-white/10 hover:bg-white/5 text-zinc-300 text-xs h-7 px-2.5 rounded-lg flex-1"
+                      >
+                        <Edit3 className="w-3 h-3 mr-1" /> Edit
+                      </Button>
+
+                      {service.link && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setPreviewUrl(service.link || null)
+                            setPreviewTitle(service.title)
+                          }}
+                          className="bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-300 text-xs h-7 px-2.5 rounded-lg"
+                          title="Test Live Preview"
+                        >
+                          <MonitorPlay className="w-3 h-3" />
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteService(service.id || service._id)}
+                        className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-7 w-7 p-0 rounded-lg"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </Card>
             ))}
           </div>
@@ -913,13 +1264,15 @@ export default function ManageHomepagePage() {
 
         {/* TAB 3: ABOUT PROFILE */}
         <TabsContent value="about" className="space-y-6">
-          {/* Top Control Banner */}
-          <div className="p-5 rounded-3xl bg-blue-500/10 border border-blue-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+          <div className="p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-blue-400" />
+                <Sparkles className="w-5 h-5 text-emerald-400" />
                 <h3 className="font-bold text-base text-white">Homepage About Profile Section</h3>
-                <Badge variant="outline" className={`text-xs ${about.show_on_homepage ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}>
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${about.show_on_homepage ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}
+                >
                   {about.show_on_homepage ? 'Displayed on Homepage' : 'Hidden from Homepage'}
                 </Badge>
               </div>
@@ -934,17 +1287,20 @@ export default function ManageHomepagePage() {
               </span>
               <Switch
                 checked={about.show_on_homepage}
-                onCheckedChange={(checked) => setAbout(prev => ({ ...prev, show_on_homepage: checked }))}
+                onCheckedChange={checked => {
+                  const updated = { ...about, show_on_homepage: checked }
+                  setAbout(updated)
+                  handleSaveAbout(updated)
+                }}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left: Edit Form */}
             <Card className="lg:col-span-7 bg-zinc-950/80 border-white/10 shadow-xl rounded-3xl">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="w-5 h-5 text-blue-400" />
+                <CardTitle className="text-lg flex items-center gap-2 text-white">
+                  <User className="w-5 h-5 text-emerald-400" />
                   <span>Edit Profile Information</span>
                 </CardTitle>
                 <CardDescription>
@@ -958,7 +1314,7 @@ export default function ManageHomepagePage() {
                     <Input
                       value={about.title}
                       onChange={e => setAbout(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="e.g. Full-Stack Programming & Cinematic Photography Design"
+                      placeholder="Full-Stack Programming & Cinematic Photography Design"
                       className="bg-zinc-900 border-white/10 rounded-xl text-xs sm:text-sm text-white"
                     />
                   </div>
@@ -1001,11 +1357,11 @@ export default function ManageHomepagePage() {
                 <div className="space-y-2">
                   <Label className="text-xs text-zinc-400">Profile Portrait / Brand Logo</Label>
                   <CloudinaryUpload
-                    onUploadComplete={(result) => {
+                    onUploadComplete={result => {
                       setAbout(prev => ({
                         ...prev,
                         profile_image_url: result.image_url,
-                        profile_image_id: result.image_id
+                        profile_image_id: result.image_id,
                       }))
                     }}
                     currentImageUrl={about.profile_image_url || undefined}
@@ -1017,19 +1373,14 @@ export default function ManageHomepagePage() {
                   <Button
                     onClick={() => handleSaveAbout()}
                     disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm h-10 px-6 font-semibold"
+                    className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-xl text-xs sm:text-sm h-10 px-6"
                   >
                     {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     <Save className="w-4 h-4 mr-2" />
                     <span>Save About Profile</span>
                   </Button>
 
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-zinc-400 hover:text-white"
-                  >
+                  <Button asChild variant="ghost" size="sm" className="text-xs text-zinc-400 hover:text-white">
                     <Link href="/about" target="_blank" className="flex items-center gap-1.5">
                       <span>Preview /about Page</span>
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -1039,11 +1390,11 @@ export default function ManageHomepagePage() {
               </CardContent>
             </Card>
 
-            {/* Right: Live Realistic Preview */}
+            {/* Live Realistic Preview */}
             <div className="lg:col-span-5 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5 text-blue-400" />
+                  <Eye className="w-3.5 h-3.5 text-emerald-400" />
                   Live Homepage Preview
                 </span>
                 <Badge variant="outline" className="text-[10px] bg-zinc-900 text-zinc-400 border-white/10">
@@ -1051,16 +1402,13 @@ export default function ManageHomepagePage() {
                 </Badge>
               </div>
 
-              <div className={`p-6 rounded-3xl border border-white/10 bg-zinc-950/90 shadow-2xl space-y-4 relative overflow-hidden transition-all duration-300 ${!about.show_on_homepage ? 'opacity-40 grayscale' : ''}`}>
+              <div
+                className={`p-6 rounded-3xl border border-white/10 bg-zinc-950/90 shadow-2xl space-y-4 relative overflow-hidden transition-all duration-300 ${!about.show_on_homepage ? 'opacity-40 grayscale' : ''}`}
+              >
                 <div className="flex items-center gap-3">
                   <div className="relative w-16 h-16 rounded-2xl overflow-hidden border border-white/15 bg-zinc-900 shrink-0">
                     {about.profile_image_url ? (
-                      <NextImage
-                        src={about.profile_image_url}
-                        alt="Profile"
-                        fill
-                        className="object-cover"
-                      />
+                      <NextImage src={about.profile_image_url} alt="Profile" fill className="object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-zinc-600">
                         <User className="w-8 h-8 text-emerald-400" />
@@ -1098,11 +1446,7 @@ export default function ManageHomepagePage() {
 
                 <div className="pt-2 flex items-center justify-between text-xs">
                   <span className="text-zinc-500 text-[11px]">Rendered on Homepage</span>
-                  <Link
-                    href="/"
-                    target="_blank"
-                    className="text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold"
-                  >
+                  <Link href="/" target="_blank" className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold">
                     <span>View Home</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
                   </Link>
@@ -1117,142 +1461,220 @@ export default function ManageHomepagePage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Camera className="w-5 h-5 text-amber-400" />
-                <span>Featured Photography Albums on Homepage</span>
+                <Camera className="w-5 h-5 text-emerald-400" />
+                <span>Main Photography Albums on Homepage</span>
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Toggle which curated collections appear in the visual gallery section on the Homepage.
+                All Main Albums (root collections without parent) appear directly on your Homepage. Sub-albums appear nested inside their parent collection.
               </p>
             </div>
 
-            <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <Input
-                value={albumSearch}
-                onChange={e => setAlbumSearch(e.target.value)}
-                placeholder="Search albums..."
-                className="bg-zinc-900 border-white/10 rounded-xl pl-9 text-xs"
-              />
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-xl bg-zinc-900 border border-white/10 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setAlbumFilter('all')}
+                  className={`px-3 py-1 rounded-lg transition-colors ${albumFilter === 'all' ? 'bg-emerald-500 text-black font-semibold' : 'text-zinc-400'}`}
+                >
+                  All ({collections.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAlbumFilter('main')}
+                  className={`px-3 py-1 rounded-lg transition-colors ${albumFilter === 'main' ? 'bg-emerald-500 text-black font-semibold' : 'text-zinc-400'}`}
+                >
+                  Main ({mainAlbums.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAlbumFilter('sub')}
+                  className={`px-3 py-1 rounded-lg transition-colors ${albumFilter === 'sub' ? 'bg-emerald-500 text-black font-semibold' : 'text-zinc-400'}`}
+                >
+                  Sub ({collections.length - mainAlbums.length})
+                </button>
+              </div>
+
+              <div className="relative w-full sm:w-56">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <Input
+                  value={albumSearch}
+                  onChange={e => setAlbumSearch(e.target.value)}
+                  placeholder="Search albums..."
+                  className="bg-zinc-900 border-white/10 rounded-xl pl-9 text-xs"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredAlbums.map((album) => (
-              <Card
-                key={album.id}
-                className={`bg-zinc-950/80 border-white/10 rounded-3xl overflow-hidden hover:border-white/20 transition-all duration-300 ${album.is_featured ? 'ring-1 ring-amber-500/40' : ''}`}
-              >
-                <div className="relative aspect-[16/10] w-full bg-zinc-900">
-                  {album.cover_image_url ? (
-                    <NextImage
-                      src={album.cover_image_url}
-                      alt={album.title}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                      <FolderOpen className="w-10 h-10" />
-                    </div>
-                  )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredAlbums.map(album => {
+              const isMain = !album.parent_id
+              return (
+                <Card
+                  key={album.id}
+                  className={`bg-zinc-950 border-white/10 rounded-2xl overflow-hidden hover:border-white/25 transition-all duration-300 flex flex-col justify-between ${album.featured || album.is_featured ? 'ring-1 ring-emerald-500/50' : ''}`}
+                >
+                  <div className="relative aspect-[4/3] w-full bg-zinc-900">
+                    {album.cover_image_url ? (
+                      <NextImage src={album.cover_image_url} alt={album.title} fill className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-zinc-900 via-zinc-950 to-black text-zinc-500 gap-2">
+                        <FolderOpen className="w-10 h-10 text-zinc-600" />
+                        <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-500">Empty Album</span>
+                      </div>
+                    )}
 
-                  {album.is_featured && (
-                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-amber-500 text-black font-bold text-[10px] flex items-center gap-1 shadow-lg">
-                      <Star className="w-3 h-3 fill-black" />
-                      <span>Featured</span>
+                    {/* Top Badges */}
+                    <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                      {isMain ? (
+                        <span className="px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-emerald-400 border border-emerald-500/30 font-mono text-[10px] font-bold">
+                          MAIN ALBUM
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-cyan-400 border border-cyan-500/30 font-mono text-[10px]">
+                          SUB-ALBUM
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <div className="p-4 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-bold text-white tracking-tight truncate max-w-[180px]">
-                      {album.title}
-                    </h3>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      {album.photos_count ?? 0} photos
-                    </p>
+                    {(album.featured || album.is_featured) && (
+                      <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-emerald-500 text-black font-bold text-[10px] flex items-center gap-1 shadow-md">
+                        <Star className="w-3 h-3 fill-black" />
+                        <span>Pinned</span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={album.is_featured ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleToggleCollectionFeatured(album.id, album.is_featured)}
-                      className={`rounded-xl text-xs h-8 ${album.is_featured ? 'bg-amber-500 hover:bg-amber-400 text-black font-semibold' : 'bg-zinc-900 border-white/10 text-zinc-300'}`}
-                    >
-                      {album.is_featured ? 'Pinned' : 'Pin to Home'}
-                    </Button>
+                  <div className="p-3.5 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-sm font-bold text-white truncate max-w-[150px]">
+                          {album.title}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-zinc-400 font-mono">
+                          <span>{album.photos_count ?? 0} photos</span>
+                          {album.sub_albums_count ? (
+                            <>
+                              <span>•</span>
+                              <span>{album.sub_albums_count} sub-albums</span>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <Button
+                        variant={album.featured || album.is_featured ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleToggleCollectionFeatured(album.id, album.featured || album.is_featured)}
+                        className={`rounded-xl text-[11px] h-7 px-2.5 ${album.featured || album.is_featured ? 'bg-emerald-500 hover:bg-emerald-400 text-black font-semibold' : 'bg-zinc-900 border-white/10 text-zinc-300'}`}
+                      >
+                        {album.featured || album.is_featured ? 'Pinned' : 'Pin'}
+                      </Button>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px]">
+                      <Link
+                        href={`/collection/${album.slug}`}
+                        target="_blank"
+                        className="text-zinc-400 hover:text-emerald-400 flex items-center gap-1 transition-colors"
+                      >
+                        <span>View Album</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+
+                      <Link
+                        href="/admin/dashboard/collections"
+                        className="text-zinc-500 hover:text-white transition-colors"
+                      >
+                        Manage
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              )
+            })}
           </div>
         </TabsContent>
 
-        {/* TAB 4: FEATURED VIDEOS */}
+        {/* TAB 5: FEATURED VIDEOS */}
         <TabsContent value="videos" className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Film className="w-5 h-5 text-purple-400" />
-                <span>Featured Motion & Videos on Homepage</span>
+                <span>Cinema & Motion Highlights on Homepage</span>
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
                 Toggle which cinema productions and motion highlights appear on the Homepage.
               </p>
             </div>
 
-            <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <Input
-                value={videoSearch}
-                onChange={e => setVideoSearch(e.target.value)}
-                placeholder="Search videos..."
-                className="bg-zinc-900 border-white/10 rounded-xl pl-9 text-xs"
-              />
+            <div className="flex items-center gap-2">
+              <Button asChild size="sm" className="bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs h-8">
+                <Link href="/admin/dashboard/videos">
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add New Video
+                </Link>
+              </Button>
+
+              <div className="relative w-full sm:w-56">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <Input
+                  value={videoSearch}
+                  onChange={e => setVideoSearch(e.target.value)}
+                  placeholder="Search videos..."
+                  className="bg-zinc-900 border-white/10 rounded-xl pl-9 text-xs"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredVideos.map((video) => (
-              <Card
-                key={video.id}
-                className={`bg-zinc-950/80 border-white/10 rounded-3xl overflow-hidden hover:border-white/20 transition-all duration-300 ${video.featured ? 'ring-1 ring-purple-500/40' : ''}`}
-              >
-                <div className="relative aspect-[16/9] w-full bg-zinc-900">
-                  {video.thumbnail_url ? (
-                    <NextImage
-                      src={video.thumbnail_url}
-                      alt={video.title}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                      <Video className="w-10 h-10" />
-                    </div>
-                  )}
+          {filteredVideos.length === 0 ? (
+            <div className="p-12 rounded-3xl bg-zinc-950 border border-white/10 text-center space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto text-purple-400">
+                <Video className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-white">No Videos Created Yet</h3>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                Upload video reels or link YouTube/Vimeo highlights in the Videos manager to showcase them on your Homepage.
+              </p>
+              <Button asChild className="bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs">
+                <Link href="/admin/dashboard/videos">Open Videos Manager</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {filteredVideos.map(video => (
+                <Card
+                  key={video.id}
+                  className={`bg-zinc-950 border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all duration-300 ${video.featured ? 'ring-1 ring-purple-500/40' : ''}`}
+                >
+                  <div className="relative aspect-[16/9] w-full bg-zinc-900">
+                    {video.thumbnail_url ? (
+                      <NextImage src={video.thumbnail_url} alt={video.title} fill className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                        <Video className="w-10 h-10" />
+                      </div>
+                    )}
 
-                  {video.featured && (
-                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-purple-500 text-white font-bold text-[10px] flex items-center gap-1 shadow-lg">
-                      <Star className="w-3 h-3 fill-white" />
-                      <span>Featured</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-bold text-white tracking-tight truncate max-w-[180px]">
-                      {video.title}
-                    </h3>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      {video.category || 'Cinema'} {video.year ? `• ${video.year}` : ''}
-                    </p>
+                    {video.featured && (
+                      <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-purple-500 text-white font-bold text-[10px] flex items-center gap-1 shadow-lg">
+                        <Star className="w-3 h-3 fill-white" />
+                        <span>Featured</span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="p-4 flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-white tracking-tight truncate max-w-[180px]">
+                        {video.title}
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        {video.category || 'Cinema'} {video.year ? `• ${video.year}` : ''}
+                      </p>
+                    </div>
+
                     <Button
                       variant={video.featured ? 'default' : 'outline'}
                       size="sm"
@@ -1262,9 +1684,75 @@ export default function ManageHomepagePage() {
                       {video.featured ? 'Pinned' : 'Pin to Home'}
                     </Button>
                   </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* TAB 6: INTERACTIVE LIVE VIEWPORT */}
+        <TabsContent value="preview" className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-950 border border-white/10">
+            <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>LIVE HOMEPAGE SIMULATOR</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-xl bg-zinc-900 border border-white/10 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('desktop')}
+                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-colors ${previewDevice === 'desktop' ? 'bg-emerald-500 text-black font-semibold' : 'text-zinc-400'}`}
+                >
+                  <Laptop className="w-3.5 h-3.5" /> Desktop
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('mobile')}
+                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-colors ${previewDevice === 'mobile' ? 'bg-emerald-500 text-black font-semibold' : 'text-zinc-400'}`}
+                >
+                  <Smartphone className="w-3.5 h-3.5" /> Mobile
+                </button>
+              </div>
+
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="bg-zinc-900 border-white/10 text-xs h-8 rounded-xl text-zinc-300"
+              >
+                <Link href="/" target="_blank" className="flex items-center gap-1.5">
+                  <Maximize2 className="w-3.5 h-3.5" /> Fullscreen
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {/* Device Frame */}
+          <div className="flex justify-center p-4 bg-zinc-950/60 rounded-3xl border border-white/10 overflow-hidden">
+            <div
+              className={`transition-all duration-300 overflow-hidden bg-black border border-white/20 shadow-2xl rounded-3xl ${previewDevice === 'mobile' ? 'w-[390px] h-[780px]' : 'w-full h-[850px]'}`}
+            >
+              <div className="px-4 py-2.5 bg-zinc-900 border-b border-white/10 flex items-center justify-between text-xs font-mono text-zinc-400 select-none">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
                 </div>
-              </Card>
-            ))}
+                <div className="flex items-center gap-1.5 px-3 py-0.5 rounded bg-zinc-950 border border-white/10 text-[11px]">
+                  <Lock className="w-2.5 h-2.5 text-emerald-400" />
+                  <span>peakdeth.com</span>
+                </div>
+                <span className="text-[10px] text-zinc-500">HTTPS / 200 OK</span>
+              </div>
+
+              <iframe
+                src="/"
+                title="Live Homepage"
+                className="w-full h-[calc(100%-40px)] border-0 bg-[#030303]"
+              />
+            </div>
           </div>
         </TabsContent>
       </Tabs>
