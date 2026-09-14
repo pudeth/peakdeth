@@ -209,9 +209,11 @@ export function Portfolio({
                   }
 
                   return (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-800/40 text-zinc-500 gap-2">
-                      <FolderOpen className="w-12 h-12 stroke-[1.5] text-white/30" />
-                      <span className="text-[11px] uppercase tracking-widest font-light text-white/40">Album</span>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-zinc-900/80 via-zinc-950 to-black text-zinc-400 gap-2.5 border border-white/5">
+                      <div className="w-14 h-14 rounded-2xl bg-zinc-900/90 border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-105 group-hover:border-emerald-500/30 transition-all duration-300">
+                        <FolderOpen className="w-7 h-7 stroke-[1.5] text-zinc-400 group-hover:text-emerald-400 transition-colors" />
+                      </div>
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 group-hover:text-zinc-300 transition-colors">Empty Album</span>
                     </div>
                   )
                 })()}

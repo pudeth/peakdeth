@@ -68,5 +68,19 @@
     "order": 0,
     "created_at": "2026-09-14T14:23:19.783409+00:00",
     "updated_at": "2026-09-14T14:23:19.783409+00:00"
+  },
+  {
+    "id": "d9950769-2792-4c3e-a444-7be50fb33fb8",
+    "title": "ABA",
+    "name": "ABA",
+    "slug": "aba",
+    "description": "",
+    "cover_image_url": null,
+    "cover_image_id": null,
+    "parent_id": null,
+    "featured": false,
+    "order": 0,
+    "created_at": "2026-09-14T15:00:58.164+00:00",
+    "updated_at": "2026-09-14T15:00:58.164+00:00"
   }
 ]

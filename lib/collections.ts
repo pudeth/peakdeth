@@ -326,13 +326,18 @@ export async function getCollectionsHierarchy(): Promise<{
 export async function getFeaturedCollections(): Promise<CollectionWithStats[]> {
   const { rootCollections } = await getCollectionsHierarchy()
 
-  // Only return main categories (top-level root collections where parent_id is null)
-  let featured = rootCollections.filter((col) => col.featured)
-  if (featured.length === 0) {
-    featured = rootCollections
-  }
+  // Return all main categories (top-level root collections where parent_id is null)
+  // Featured albums first, then sorted by order, then newest
+  const sorted = [...rootCollections].sort((a, b) => {
+    if (a.featured && !b.featured) return -1
+    if (!a.featured && b.featured) return 1
+    if ((a.order ?? 0) !== (b.order ?? 0)) {
+      return (a.order ?? 0) - (b.order ?? 0)
+    }
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  })
 
-  return featured.slice(0, 9)
+  return sorted.slice(0, 12)
 }
 
 /**
