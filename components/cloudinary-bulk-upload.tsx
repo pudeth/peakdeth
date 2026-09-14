@@ -329,61 +329,95 @@ export function CloudinaryBulkUpload({ onUploadComplete, folder }: CloudinaryBul
     setUploading(true)
     setProgress(0)
     const uploaded: UploadedImage[] = []
+    const failed: string[] = []
     let compressedCount = 0
     let totalSavedMB = 0
+    let completedCount = 0
 
     try {
       const signedData = await getCloudinarySignature()
 
-      for (let i = 0; i < files.length; i++) {
-        const originalFile = files[i]
-        const originalSizeMB = originalFile.size / 1024 / 1024
+      const concurrency = 2
+      let currentIndex = 0
 
-        setCurrentFile(`${i + 1}/${files.length}: ${originalFile.name}`)
-        setProgress(((i + 1) / files.length) * 100)
+      const uploadWorker = async () => {
+        while (currentIndex < files.length) {
+          const index = currentIndex++
+          const originalFile = files[index]
+          const originalSizeMB = originalFile.size / 1024 / 1024
 
-        // Extract EXIF metadata BEFORE compression (to preserve it)
-        const exifData = await extractExifData(originalFile)
+          setCurrentFile(`${index + 1}/${files.length}: ${originalFile.name}`)
 
-        // Compress if needed
-        const file = await compressImage(originalFile)
-        const compressedSizeMB = file.size / 1024 / 1024
+          let success = false
+          for (let attempt = 0; attempt < 2 && !success; attempt++) {
+            try {
+              // Extract EXIF metadata BEFORE compression
+              const exifData = await extractExifData(originalFile)
 
-        if (file !== originalFile) {
-          compressedCount++
-          totalSavedMB += (originalSizeMB - compressedSizeMB)
+              // Compress if needed
+              const file = await compressImage(originalFile)
+              const compressedSizeMB = file.size / 1024 / 1024
+
+              if (file !== originalFile) {
+                compressedCount++
+                totalSavedMB += (originalSizeMB - compressedSizeMB)
+              }
+
+              // Create preview
+              const preview = URL.createObjectURL(file)
+
+              // Upload to Cloudinary
+              const result = await uploadToCloudinary(file, signedData)
+
+              uploaded.push({
+                image_id: result.public_id,
+                image_url: result.secure_url,
+                image_width: result.width,
+                image_height: result.height,
+                preview,
+                name: originalFile.name,
+                ...exifData,
+              })
+              success = true
+            } catch (err) {
+              if (attempt === 1) {
+                console.error(`Failed uploading ${originalFile.name} after 2 attempts:`, err)
+                failed.push(originalFile.name)
+              }
+            }
+          }
+
+          completedCount++
+          setProgress(Math.round((completedCount / files.length) * 100))
         }
-
-        // Create preview
-        const preview = URL.createObjectURL(file)
-
-        // Upload to Cloudinary
-        const result = await uploadToCloudinary(file, signedData)
-
-        uploaded.push({
-          image_id: result.public_id,
-          image_url: result.secure_url,
-          image_width: result.width,
-          image_height: result.height,
-          preview,
-          name: originalFile.name,
-          ...exifData, // Include EXIF metadata
-        })
       }
 
-      setUploadedImages([...uploadedImages, ...uploaded])
+      const workers = Array.from({ length: Math.min(concurrency, files.length) }, () => uploadWorker())
+      await Promise.all(workers)
 
-      // Show success message with compression stats
-      let message = `${uploaded.length} image${uploaded.length > 1 ? 's' : ''} uploaded successfully!`
-      if (compressedCount > 0) {
-        message += ` (${compressedCount} compressed, saved ${totalSavedMB.toFixed(1)}MB)`
+      if (uploaded.length > 0) {
+        const nextUploadedImages = [...uploadedImages, ...uploaded]
+        setUploadedImages(nextUploadedImages)
+
+        let message = `${uploaded.length} image${uploaded.length > 1 ? 's' : ''} uploaded successfully!`
+        if (failed.length > 0) {
+          message += ` (${failed.length} failed)`
+        }
+        if (compressedCount > 0) {
+          message += ` (${compressedCount} compressed, saved ${totalSavedMB.toFixed(1)}MB)`
+        }
+        toast.success(message)
+
+        onUploadComplete(nextUploadedImages)
+      } else if (failed.length > 0) {
+        toast.error(`Failed to upload ${failed.length} image(s)`)
       }
-      toast.success(message)
-
-      onUploadComplete([...uploadedImages, ...uploaded])
     } catch (error: any) {
       console.error('Upload error:', error)
       toast.error(error?.message || 'Failed to upload some images')
+      if (uploaded.length > 0) {
+        onUploadComplete([...uploadedImages, ...uploaded])
+      }
     } finally {
       setUploading(false)
       setCurrentFile('')

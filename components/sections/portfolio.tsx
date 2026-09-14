@@ -198,6 +198,7 @@ export function Portfolio({
                           src={getThumbnailFromSource(url, 1200)}
                           alt={collection.title}
                           fill
+                          unoptimized={url?.startsWith('http')}
                           sizes="(max-width: 768px) 100vw, 50vw"
                           className={`object-cover absolute inset-0 transition-transform duration-700 ease-out ${transformClass}`}
                           placeholder="blur"

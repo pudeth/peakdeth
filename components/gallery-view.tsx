@@ -180,6 +180,7 @@ export function GalleryView({ collections, totalPhotosCount }: GalleryViewProps)
                                 src={getThumbnailFromSource(url, 1200)}
                                 alt={collection.title}
                                 fill
+                                unoptimized={url?.startsWith('http')}
                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                 className={`object-cover absolute inset-0 transition-transform duration-700 ${transformClass}`}
                                 loading={index < 3 && isTop ? 'eager' : 'lazy'}

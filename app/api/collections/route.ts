@@ -27,6 +27,9 @@ async function checkAdminAuth(): Promise<boolean> {
   }
 }
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   try {
     let collections: any[] = []
@@ -67,7 +70,9 @@ export async function GET() {
       collectionPhotos = await getStoredCollectionPhotos()
     }
 
-    return NextResponse.json({ collections, collectionPhotos })
+    const response = NextResponse.json({ collections, collectionPhotos })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    return response
   } catch (error) {
     console.error('Error in GET /api/collections:', error)
     return NextResponse.json({ error: 'Failed to fetch collections' }, { status: 500 })

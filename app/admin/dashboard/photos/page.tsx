@@ -47,6 +47,62 @@ type ViewMode = 'grid' | 'masonry' | 'compact' | 'list'
 type ExifFilter = 'all' | 'with-exif' | 'no-exif' | 'with-location'
 type SortOption = 'newest' | 'oldest' | 'date-taken-desc' | 'date-taken-asc' | 'title'
 
+function PhotoItemThumbnail({
+  photo,
+  width = 600,
+  className = "object-cover",
+  sizes
+}: {
+  photo: Photo
+  width?: number
+  className?: string
+  sizes?: string
+}) {
+  const initialUrl = useMemo(() => {
+    if (photo.image_id && !photo.image_id.startsWith('/uploads/')) {
+      const thumb = getThumbnailUrl(photo.image_id, width)
+      if (thumb && thumb !== '/file.svg') return thumb
+    }
+    return photo.image_url || '/file.svg'
+  }, [photo.image_id, photo.image_url, width])
+
+  const [src, setSrc] = useState(initialUrl)
+  const [hasError, setHasError] = useState(false)
+
+  useEffect(() => {
+    setSrc(initialUrl)
+    setHasError(false)
+  }, [initialUrl])
+
+  const isExternal = src.startsWith('http://') || src.startsWith('https://')
+
+  if (hasError) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-500 gap-1 text-center p-1">
+        <ImageIcon className="w-5 h-5 text-zinc-600" />
+      </div>
+    )
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={photo.title || 'Photo'}
+      fill
+      unoptimized={isExternal}
+      sizes={sizes}
+      className={className}
+      onError={() => {
+        if (src !== photo.image_url && photo.image_url) {
+          setSrc(photo.image_url)
+        } else {
+          setHasError(true)
+        }
+      }}
+    />
+  )
+}
+
 export default function PhotosManagementPage() {
   const supabase = createClient()
 
@@ -106,15 +162,96 @@ export default function PhotosManagementPage() {
     try {
       setLoading(true)
 
+      // 1. Try direct Supabase first (real-time source of truth)
+      try {
+        const { data: colData } = await supabase
+          .from('collections')
+          .select('*')
+          .order('title', { ascending: true })
+
+        const allPhotosList: Photo[] = []
+        let photoFrom = 0
+        const PHOTO_PAGE_SIZE = 1000
+        let hasMorePhotos = true
+
+        while (hasMorePhotos) {
+          const { data: photoBatch, error: photosError } = await supabase
+            .from('photos')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .range(photoFrom, photoFrom + PHOTO_PAGE_SIZE - 1)
+
+          if (photosError) throw photosError
+
+          if (photoBatch && photoBatch.length > 0) {
+            allPhotosList.push(...photoBatch)
+            if (photoBatch.length < PHOTO_PAGE_SIZE) {
+              hasMorePhotos = false
+            } else {
+              photoFrom += PHOTO_PAGE_SIZE
+            }
+          } else {
+            hasMorePhotos = false
+          }
+        }
+
+        if (allPhotosList.length > 0 || (colData && colData.length > 0)) {
+          if (colData) setCollections(colData)
+          setPhotos(allPhotosList)
+
+          const linksMap = new Map<string, { id: string; title: string }[]>()
+          let from = 0
+          const PAGE_SIZE = 1000
+          let hasMore = true
+
+          const colTitleMap = new Map<string, string>()
+          for (const c of colData || []) {
+            colTitleMap.set(c.id, c.title)
+          }
+
+          while (hasMore) {
+            const { data: linkBatch, error: linkErr } = await supabase
+              .from('collection_photos')
+              .select('collection_id, photo_id')
+              .range(from, from + PAGE_SIZE - 1)
+
+            if (linkErr) break
+
+            if (linkBatch && linkBatch.length > 0) {
+              for (const link of linkBatch) {
+                if (!link.photo_id || !link.collection_id) continue
+                const list = linksMap.get(link.photo_id) || []
+                const title = colTitleMap.get(link.collection_id) || 'Album'
+                list.push({ id: link.collection_id, title })
+                linksMap.set(link.photo_id, list)
+              }
+
+              if (linkBatch.length < PAGE_SIZE) {
+                hasMore = false
+              } else {
+                from += PAGE_SIZE
+              }
+            } else {
+              hasMore = false
+            }
+          }
+
+          setPhotoCollectionMap(linksMap)
+          return
+        }
+      } catch (dbErr) {
+        console.warn('Direct Supabase fetch in photos dashboard failed, falling back to API:', dbErr)
+      }
+
+      // 2. Fallback to API with cache-busting
       let colList: Collection[] = []
       let photoList: Photo[] = []
       let rawLinks: { collection_id: string; photo_id: string }[] = []
 
-      // Try local API first (works universally in dev JSON storage & Supabase sync)
       try {
         const [photosRes, colRes] = await Promise.all([
-          fetch('/api/photos'),
-          fetch('/api/collections')
+          fetch(`/api/photos?_t=${Date.now()}`, { cache: 'no-store' }),
+          fetch(`/api/collections?_t=${Date.now()}`, { cache: 'no-store' })
         ])
 
         if (photosRes.ok) {
@@ -134,107 +271,24 @@ export default function PhotosManagementPage() {
           }
         }
       } catch (e) {
-        console.warn('API fetch error, trying direct Supabase:', e)
+        console.warn('API fetch error fallback in photos dashboard:', e)
       }
 
-      if (colList.length > 0 || photoList.length > 0) {
-        setCollections(colList)
-        setPhotos(photoList)
+      setCollections(colList)
+      setPhotos(photoList)
 
-        const linksMap = new Map<string, { id: string; title: string }[]>()
-        const colTitleMap = new Map<string, string>()
-        for (const c of colList) {
-          colTitleMap.set(c.id, c.title)
-        }
-        for (const link of rawLinks) {
-          if (!link.photo_id || !link.collection_id) continue
-          const list = linksMap.get(link.photo_id) || []
-          const title = colTitleMap.get(link.collection_id) || 'Album'
-          list.push({ id: link.collection_id, title })
-          linksMap.set(link.photo_id, list)
-        }
-        setPhotoCollectionMap(linksMap)
-        return
-      }
-
-      // 1. Fetch Collections from Supabase
-      const { data: colData } = await supabase
-        .from('collections')
-        .select('*')
-        .order('title', { ascending: true })
-
-      if (colData) setCollections(colData)
-
-      // 2. Fetch ALL photos in batches to bypass PostgREST 1,000-row limit
-      const allPhotosList: Photo[] = []
-      let photoFrom = 0
-      const PHOTO_PAGE_SIZE = 1000
-      let hasMorePhotos = true
-
-      while (hasMorePhotos) {
-        const { data: photoBatch, error: photosError } = await supabase
-          .from('photos')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .range(photoFrom, photoFrom + PHOTO_PAGE_SIZE - 1)
-
-        if (photosError) throw photosError
-
-        if (photoBatch && photoBatch.length > 0) {
-          allPhotosList.push(...photoBatch)
-          if (photoBatch.length < PHOTO_PAGE_SIZE) {
-            hasMorePhotos = false
-          } else {
-            photoFrom += PHOTO_PAGE_SIZE
-          }
-        } else {
-          hasMorePhotos = false
-        }
-      }
-
-      setPhotos(allPhotosList)
-
-      // 3. Fetch collection_photos in batches to build photo -> albums mapping
       const linksMap = new Map<string, { id: string; title: string }[]>()
-      let from = 0
-      const PAGE_SIZE = 1000
-      let hasMore = true
-
       const colTitleMap = new Map<string, string>()
-      for (const c of colData || []) {
+      for (const c of colList) {
         colTitleMap.set(c.id, c.title)
       }
-
-      while (hasMore) {
-        const { data: linkBatch, error: linkErr } = await supabase
-          .from('collection_photos')
-          .select('collection_id, photo_id')
-          .range(from, from + PAGE_SIZE - 1)
-
-        if (linkErr) {
-          console.error('Error fetching collection_photos links:', linkErr)
-          break
-        }
-
-        if (linkBatch && linkBatch.length > 0) {
-          for (const link of linkBatch) {
-            if (!link.photo_id || !link.collection_id) continue
-            const list = linksMap.get(link.photo_id) || []
-            const title = colTitleMap.get(link.collection_id) || 'Album'
-            list.push({ id: link.collection_id, title })
-            linksMap.set(link.photo_id, list)
-          }
-
-          if (linkBatch.length < PAGE_SIZE) {
-            hasMore = false
-          } else {
-            from += PAGE_SIZE
-          }
-        } else {
-          hasMore = false
-        }
+      for (const link of rawLinks) {
+        if (!link.photo_id || !link.collection_id) continue
+        const list = linksMap.get(link.photo_id) || []
+        const title = colTitleMap.get(link.collection_id) || 'Album'
+        list.push({ id: link.collection_id, title })
+        linksMap.set(link.photo_id, list)
       }
-
       setPhotoCollectionMap(linksMap)
     } catch (err) {
       console.error('Failed to load photos library:', err)
@@ -492,39 +546,43 @@ export default function PhotosManagementPage() {
         }
       })
 
-      const res = await fetch('/api/photos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          photos: photosToInsert,
-          collection_id: bulkUploadTargetAlbum && bulkUploadTargetAlbum !== 'none' ? bulkUploadTargetAlbum : undefined,
-        }),
-      })
+      // Batch photo inserts in chunks of 25
+      const BATCH_SIZE = 25
+      for (let i = 0; i < photosToInsert.length; i += BATCH_SIZE) {
+        const chunk = photosToInsert.slice(i, i + BATCH_SIZE)
+        const res = await fetch('/api/photos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            photos: chunk,
+            collection_id: bulkUploadTargetAlbum && bulkUploadTargetAlbum !== 'none' ? bulkUploadTargetAlbum : undefined,
+          }),
+        })
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}))
-        console.warn('API /api/photos failed, falling back to Supabase:', errJson)
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}))
+          console.warn(`API /api/photos chunk ${i} failed, falling back to Supabase:`, errJson)
 
-        const { data: insertedPhotos, error: photoError } = await supabase
-          .from('photos')
-          .insert(photosToInsert)
-          .select()
+          const { data: insertedPhotos, error: photoError } = await supabase
+            .from('photos')
+            .insert(chunk)
+            .select()
 
-        if (photoError) throw photoError
+          if (photoError) throw photoError
 
-        // If user selected a target album during bulk upload, link them
-        if (bulkUploadTargetAlbum && bulkUploadTargetAlbum !== 'none' && insertedPhotos) {
-          const collectionLinks = insertedPhotos.map((p, idx) => ({
-            collection_id: bulkUploadTargetAlbum,
-            photo_id: p.id,
-            order: idx
-          }))
+          if (bulkUploadTargetAlbum && bulkUploadTargetAlbum !== 'none' && insertedPhotos) {
+            const collectionLinks = insertedPhotos.map((p, idx) => ({
+              collection_id: bulkUploadTargetAlbum,
+              photo_id: p.id,
+              order: idx
+            }))
 
-          const { error: linkErr } = await supabase
-            .from('collection_photos')
-            .upsert(collectionLinks, { onConflict: 'collection_id,photo_id' })
+            const { error: linkErr } = await supabase
+              .from('collection_photos')
+              .upsert(collectionLinks, { onConflict: 'collection_id,photo_id' })
 
-          if (linkErr) throw linkErr
+            if (linkErr) throw linkErr
+          }
         }
       }
 
@@ -536,6 +594,35 @@ export default function PhotosManagementPage() {
       console.error('Error during bulk upload:', err)
       const msg = err instanceof Error ? err.message : 'Failed to process uploaded photos'
       toast.error(msg)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleSyncCloudinaryLibrary = async () => {
+    try {
+      setActionLoading(true)
+      toast.info('Scanning and syncing photos from Cloudinary...')
+
+      const res = await fetch('/api/cloudinary/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          folder: 'rithychanvirak',
+        }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to sync with Cloudinary')
+      }
+
+      toast.success(data.message || 'Cloudinary library synced!')
+      await fetchAllData()
+      await revalidatePublicPaths(['/', '/gallery'])
+    } catch (err: any) {
+      console.error('Cloudinary sync error:', err)
+      toast.error(err?.message || 'Failed to sync library from Cloudinary')
     } finally {
       setActionLoading(false)
     }
@@ -749,6 +836,18 @@ export default function PhotosManagementPage() {
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+
+          <Button
+            onClick={handleSyncCloudinaryLibrary}
+            disabled={actionLoading || loading}
+            variant="outline"
+            size="sm"
+            className="rounded-xl border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 hover:text-white h-9 px-3 text-xs sm:text-sm"
+            title="Scan and import all images from Cloudinary library"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 text-zinc-400 ${actionLoading ? 'animate-spin' : ''}`} />
+            Sync Cloudinary
           </Button>
 
           <Button
@@ -1071,13 +1170,24 @@ export default function PhotosManagementPage() {
               ? 'Try resetting the search query or changing your album / metadata filters.'
               : 'Start by uploading your high-resolution portfolio photography.'}
           </p>
-          <Button
-            onClick={() => setShowUploadModal(true)}
-            className="rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold px-6"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Upload First Photo
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button
+              onClick={() => setShowUploadModal(true)}
+              className="rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold px-6"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Upload First Photo
+            </Button>
+            <Button
+              onClick={handleSyncCloudinaryLibrary}
+              disabled={actionLoading || loading}
+              variant="outline"
+              className="rounded-xl border-zinc-800 hover:bg-zinc-900 text-zinc-300 px-6"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 text-zinc-400 ${actionLoading ? 'animate-spin' : ''}`} />
+              Sync from Cloudinary
+            </Button>
+          </div>
         </div>
       ) : (
         <>
@@ -1114,12 +1224,7 @@ export default function PhotosManagementPage() {
 
                     {/* Thumbnail */}
                     <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 relative shrink-0">
-                      <Image
-                        src={photo.image_id ? getThumbnailUrl(photo.image_id, 300) : photo.image_url}
-                        alt={photo.title}
-                        fill
-                        className="object-cover"
-                      />
+                      <PhotoItemThumbnail photo={photo} width={300} className="object-cover" />
                     </div>
 
                     {/* Title & Metadata */}
@@ -1232,10 +1337,9 @@ export default function PhotosManagementPage() {
                         aspectRatio: viewMode === 'compact' ? '1/1' : `${boundedAspectRatio}`
                       }}
                     >
-                      <Image
-                        src={photo.image_id ? getThumbnailUrl(photo.image_id, 600) : photo.image_url}
-                        alt={photo.title}
-                        fill
+                      <PhotoItemThumbnail
+                        photo={photo}
+                        width={600}
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
@@ -1754,10 +1858,9 @@ export default function PhotosManagementPage() {
               {/* Photo Display Left */}
               <div className="flex-1 bg-black flex items-center justify-center p-4 relative min-h-[300px] md:min-h-[500px]">
                 <div className="relative w-full h-full min-h-[280px] md:min-h-[450px]">
-                  <Image
-                    src={inspectingPhoto.image_id ? getThumbnailUrl(inspectingPhoto.image_id, 1200) : inspectingPhoto.image_url}
-                    alt={inspectingPhoto.title}
-                    fill
+                  <PhotoItemThumbnail
+                    photo={inspectingPhoto}
+                    width={1200}
                     className="object-contain"
                   />
                 </div>

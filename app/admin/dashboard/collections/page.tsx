@@ -82,6 +82,53 @@ import { CSS } from '@dnd-kit/utilities'
 type ViewMode = 'grid' | 'list' | 'details'
 type ItemType = 'folder' | 'file'
 
+function CollectionPhotoThumbnail({ photo }: { photo: Photo }) {
+  const initialUrl = useMemo(() => {
+    if (photo.image_id && !photo.image_id.startsWith('/uploads/')) {
+      const thumb = getThumbnailUrl(photo.image_id, 450)
+      if (thumb && thumb !== '/file.svg') return thumb
+    }
+    return photo.image_url || '/file.svg'
+  }, [photo.image_id, photo.image_url])
+
+  const [src, setSrc] = useState(initialUrl)
+  const [hasError, setHasError] = useState(false)
+
+  useEffect(() => {
+    setSrc(initialUrl)
+    setHasError(false)
+  }, [initialUrl])
+
+  const isExternal = src.startsWith('http://') || src.startsWith('https://')
+
+  if (hasError) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-500 gap-1.5 p-2 text-center">
+        <ImageIcon className="w-6 h-6 text-zinc-600" />
+        <span className="text-[10px] text-zinc-400 truncate max-w-full px-2">{photo.title}</span>
+      </div>
+    )
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={photo.alt || photo.title}
+      fill
+      unoptimized={isExternal}
+      className="object-cover group-hover:scale-105 transition-transform duration-300"
+      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+      onError={() => {
+        if (src !== photo.image_url && photo.image_url) {
+          setSrc(photo.image_url)
+        } else {
+          setHasError(true)
+        }
+      }}
+    />
+  )
+}
+
 // Sortable Featured Item Component
 function SortableFeaturedItem({
   collection,
@@ -657,6 +704,7 @@ export default function CollectionsPage() {
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null)
   const [photoDeleteProgress, setPhotoDeleteProgress] = useState<{ current: number; total: number } | null>(null)
   const [photoRenderCount, setPhotoRenderCount] = useState(120)
+  const [syncingCloudinary, setSyncingCloudinary] = useState(false)
   const [confirmAction, setConfirmAction] = useState<{
     title: string
     description: string
@@ -718,82 +766,89 @@ export default function CollectionsPage() {
         photos: { id: string; image_url?: string } | { id: string; image_url?: string }[] | null
       }[] = []
 
-      // Try local API first
+      // Try direct Supabase first (real-time source of truth)
       try {
-        const [colRes, photoRes] = await Promise.all([
-          fetch('/api/collections'),
-          fetch('/api/photos')
-        ])
-
-        if (colRes.ok) {
-          const cData = await colRes.json()
-          if (Array.isArray(cData.collections)) {
-            allCollectionsData = cData.collections
-          }
-
-          if (Array.isArray(cData.collectionPhotos)) {
-            const photoUrlMap = new Map<string, string>()
-            if (photoRes.ok) {
-              const pData = await photoRes.json()
-              if (Array.isArray(pData.photos)) {
-                pData.photos.forEach((p: Photo) => photoUrlMap.set(p.id, p.image_url))
-              }
-            }
-            allCollectionPhotoLinks = cData.collectionPhotos.map((l: CollectionPhoto) => ({
-              collection_id: l.collection_id,
-              photo_id: l.photo_id,
-              order: l.order,
-              photos: { id: l.photo_id, image_url: photoUrlMap.get(l.photo_id) }
-            }))
-          }
-        }
-      } catch (e) {
-        console.warn('API error in loadAllCollections, trying Supabase:', e)
-      }
-
-      // If API didn't provide collections, fall back to direct Supabase
-      if (!allCollectionsData) {
-        const { data, error: colError } = await supabase
+        const { data: dbCollections, error: colError } = await supabase
           .from('collections')
           .select('*')
           .order('created_at', { ascending: false })
 
-        if (colError) throw colError
-        allCollectionsData = data || []
+        if (!colError && dbCollections && dbCollections.length > 0) {
+          allCollectionsData = dbCollections
 
-        // Fetch all collection_photos in batches from Supabase
-        let from = 0
-        const PAGE_SIZE = 1000
-        let hasMore = true
+          // Fetch all collection_photos in batches from Supabase
+          let from = 0
+          const PAGE_SIZE = 1000
+          let hasMore = true
 
-        while (hasMore) {
-          const { data: batch, error: linksError } = await supabase
-            .from('collection_photos')
-            .select(`
-              collection_id,
-              photo_id,
-              order,
-              photos ( id, image_url )
-            `)
-            .range(from, from + PAGE_SIZE - 1)
+          while (hasMore) {
+            const { data: batch, error: linksError } = await supabase
+              .from('collection_photos')
+              .select(`
+                collection_id,
+                photo_id,
+                order,
+                photos ( id, image_url )
+              `)
+              .range(from, from + PAGE_SIZE - 1)
 
-          if (linksError) {
-            console.error('Error fetching collection_photos batch:', linksError)
-            break
-          }
-
-          if (batch && batch.length > 0) {
-            allCollectionPhotoLinks.push(...(batch as unknown as typeof allCollectionPhotoLinks))
-            if (batch.length < PAGE_SIZE) {
-              hasMore = false
-            } else {
-              from += PAGE_SIZE
+            if (linksError) {
+              console.error('Error fetching collection_photos batch:', linksError)
+              break
             }
-          } else {
-            hasMore = false
+
+            if (batch && batch.length > 0) {
+              allCollectionPhotoLinks.push(...(batch as unknown as typeof allCollectionPhotoLinks))
+              if (batch.length < PAGE_SIZE) {
+                hasMore = false
+              } else {
+                from += PAGE_SIZE
+              }
+            } else {
+              hasMore = false
+            }
           }
         }
+      } catch (dbErr) {
+        console.warn('Direct Supabase error in loadAllCollections, trying API:', dbErr)
       }
+
+      // If Supabase didn't provide collections, fall back to API with cache-busting
+      if (!allCollectionsData || allCollectionsData.length === 0) {
+        try {
+          const [colRes, photoRes] = await Promise.all([
+            fetch(`/api/collections?_t=${Date.now()}`, { cache: 'no-store' }),
+            fetch(`/api/photos?_t=${Date.now()}`, { cache: 'no-store' })
+          ])
+
+          if (colRes.ok) {
+            const cData = await colRes.json()
+            if (Array.isArray(cData.collections)) {
+              allCollectionsData = cData.collections
+            }
+
+            if (Array.isArray(cData.collectionPhotos)) {
+              const photoUrlMap = new Map<string, string>()
+              if (photoRes.ok) {
+                const pData = await photoRes.json()
+                if (Array.isArray(pData.photos)) {
+                  pData.photos.forEach((p: Photo) => photoUrlMap.set(p.id, p.image_url))
+                }
+              }
+              allCollectionPhotoLinks = cData.collectionPhotos.map((l: CollectionPhoto) => ({
+                collection_id: l.collection_id,
+                photo_id: l.photo_id,
+                order: l.order,
+                photos: { id: l.photo_id, image_url: photoUrlMap.get(l.photo_id) }
+              }))
+            }
+          }
+        } catch (e) {
+          console.warn('API error in loadAllCollections fallback:', e)
+        }
+      }
+
+      allCollectionsData = allCollectionsData || []
 
       // 3. Build maps for direct photo IDs and preview collage images
       const directPhotoIdsMap = new Map<string, Set<string>>()
@@ -1012,9 +1067,60 @@ export default function CollectionsPage() {
     }
 
     try {
-      // Try local API first
+      // 1. Try direct Supabase first (real-time source of truth)
       try {
-        const res = await fetch(`/api/photos?collection_id=${encodeURIComponent(currentCollectionId)}`)
+        const allLoadedPhotos: Photo[] = []
+        let from = 0
+        const PAGE_SIZE = 1000
+        let hasMore = true
+
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('collection_photos')
+            .select(`
+              order,
+              photos (*)
+            `)
+            .eq('collection_id', currentCollectionId)
+            .order('order', { ascending: true })
+            .range(from, from + PAGE_SIZE - 1)
+
+          if (error) throw error
+
+          if (data && data.length > 0) {
+            const batchPhotos: Photo[] = []
+            for (const row of data as unknown as { order: number; photos: Photo | Photo[] | null }[]) {
+              if (!row.photos) continue
+              const photo = Array.isArray(row.photos) ? row.photos[0] : row.photos
+              if (photo && photo.id) {
+                batchPhotos.push(photo)
+              }
+            }
+            allLoadedPhotos.push(...batchPhotos)
+
+            if (data.length < PAGE_SIZE) {
+              hasMore = false
+            } else {
+              from += PAGE_SIZE
+            }
+          } else {
+            hasMore = false
+          }
+        }
+
+        if (allLoadedPhotos.length > 0) {
+          setCollectionPhotos(allLoadedPhotos)
+          return
+        }
+      } catch (dbErr) {
+        console.warn('Direct Supabase fetch for collection photos failed, falling back to API:', dbErr)
+      }
+
+      // 2. Try API fallback with cache-busting
+      try {
+        const res = await fetch(`/api/photos?collection_id=${encodeURIComponent(currentCollectionId)}&_t=${Date.now()}`, {
+          cache: 'no-store',
+        })
         if (res.ok) {
           const json = await res.json()
           if (Array.isArray(json.photos)) {
@@ -1026,47 +1132,7 @@ export default function CollectionsPage() {
         console.warn('API fetch error for collection photos:', e)
       }
 
-      // Get all photos associated with this collection in batches via Supabase
-      const allLoadedPhotos: Photo[] = []
-      let from = 0
-      const PAGE_SIZE = 1000
-      let hasMore = true
-
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from('collection_photos')
-          .select(`
-            order,
-            photos (*)
-          `)
-          .eq('collection_id', currentCollectionId)
-          .order('order', { ascending: true })
-          .range(from, from + PAGE_SIZE - 1)
-
-        if (error) throw error
-
-        if (data && data.length > 0) {
-          const batchPhotos: Photo[] = []
-          for (const row of data as unknown as { order: number; photos: Photo | Photo[] | null }[]) {
-            if (!row.photos) continue
-            const photo = Array.isArray(row.photos) ? row.photos[0] : row.photos
-            if (photo && photo.id) {
-              batchPhotos.push(photo)
-            }
-          }
-          allLoadedPhotos.push(...batchPhotos)
-
-          if (data.length < PAGE_SIZE) {
-            hasMore = false
-          } else {
-            from += PAGE_SIZE
-          }
-        } else {
-          hasMore = false
-        }
-      }
-
-      setCollectionPhotos(allLoadedPhotos)
+      setCollectionPhotos([])
     } catch (error: unknown) {
       console.error('Error loading collection photos:', error)
       toast.error('Failed to load photos')
@@ -1369,39 +1435,43 @@ export default function CollectionsPage() {
         }
       })
 
-      const res = await fetch('/api/photos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          photos: photosToInsert,
-          collection_id: currentCollectionId,
-        }),
-      })
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}))
-        console.warn('API /api/photos failed, falling back to direct Supabase:', errJson)
-
-        const { data: insertedPhotos, error: photoError } = await supabase
-          .from('photos')
-          .insert(photosToInsert)
-          .select()
-
-        if (photoError) throw photoError
-
-        // Then, associate photos with the collection
-        if (insertedPhotos) {
-          const collectionPhotosToInsert = insertedPhotos.map((photo, index) => ({
+      // Batch photo inserts in chunks of 25 to prevent timeouts or payload limits
+      const BATCH_SIZE = 25
+      for (let i = 0; i < photosToInsert.length; i += BATCH_SIZE) {
+        const chunk = photosToInsert.slice(i, i + BATCH_SIZE)
+        const res = await fetch('/api/photos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            photos: chunk,
             collection_id: currentCollectionId,
-            photo_id: photo.id,
-            order: collectionPhotos.length + index
-          }))
+          }),
+        })
 
-          const { error: associationError } = await supabase
-            .from('collection_photos')
-            .upsert(collectionPhotosToInsert, { onConflict: 'collection_id,photo_id' })
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}))
+          console.warn(`API /api/photos chunk ${i} failed, falling back to direct Supabase:`, errJson)
 
-          if (associationError) throw associationError
+          const { data: insertedPhotos, error: photoError } = await supabase
+            .from('photos')
+            .insert(chunk)
+            .select()
+
+          if (photoError) throw photoError
+
+          if (insertedPhotos && insertedPhotos.length > 0) {
+            const collectionPhotosToInsert = insertedPhotos.map((photo, idx) => ({
+              collection_id: currentCollectionId,
+              photo_id: photo.id,
+              order: collectionPhotos.length + i + idx
+            }))
+
+            const { error: associationError } = await supabase
+              .from('collection_photos')
+              .upsert(collectionPhotosToInsert, { onConflict: 'collection_id,photo_id' })
+
+            if (associationError) throw associationError
+          }
         }
       }
 
@@ -1416,6 +1486,43 @@ export default function CollectionsPage() {
       console.error('Error adding photos to collection:', error)
       const message = error instanceof Error ? error.message : 'Failed to add photos to collection'
       toast.error(message)
+    }
+  }
+
+  const handleSyncFromCloudinary = async () => {
+    const currentCollectionId = currentPath.length > 0 ? currentPath[currentPath.length - 1] : null
+    const currentCollection = allCollections.find(c => c.id === currentCollectionId)
+    const folder = currentCollection ? getCollectionFolder(currentCollection) : 'rithychanvirak/collections'
+
+    try {
+      setSyncingCloudinary(true)
+      toast.info(`Checking Cloudinary folder (${folder})...`)
+
+      const res = await fetch('/api/cloudinary/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          folder,
+          collection_id: currentCollectionId || undefined,
+        }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to sync with Cloudinary')
+      }
+
+      toast.success(data.message || 'Cloudinary sync complete!')
+      await loadCollectionPhotos()
+      await loadAllCollections()
+      await revalidatePublicPaths(
+        ['/', '/gallery', getCurrentCollectionPublicPath()].filter((path): path is string => Boolean(path))
+      )
+    } catch (err: any) {
+      console.error('Sync error:', err)
+      toast.error(err?.message || 'Failed to sync photos from Cloudinary')
+    } finally {
+      setSyncingCloudinary(false)
     }
   }
 
@@ -1783,6 +1890,17 @@ export default function CollectionsPage() {
                 <Plus className="w-4 h-4 mr-1.5" />
                 New Album
               </Button>
+              <Button
+                onClick={handleSyncFromCloudinary}
+                disabled={syncingCloudinary}
+                size="sm"
+                variant="outline"
+                className="rounded-xl border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 h-9 text-xs sm:text-sm"
+                title="Sync existing images from Cloudinary"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 text-zinc-400 ${syncingCloudinary ? 'animate-spin' : ''}`} />
+                {syncingCloudinary ? 'Syncing...' : 'Sync Cloudinary'}
+              </Button>
             </>
           ) : (
             <>
@@ -1802,6 +1920,17 @@ export default function CollectionsPage() {
               >
                 <Plus className="w-4 h-4 mr-1.5" />
                 Upload Photos
+              </Button>
+              <Button
+                onClick={handleSyncFromCloudinary}
+                disabled={syncingCloudinary}
+                size="sm"
+                variant="outline"
+                className="rounded-xl border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 h-9 text-xs sm:text-sm"
+                title="Sync existing images from Cloudinary into this album"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 text-zinc-400 ${syncingCloudinary ? 'animate-spin' : ''}`} />
+                {syncingCloudinary ? 'Syncing...' : 'Sync Cloudinary'}
               </Button>
               <Button
                 onClick={() => setShowCreateFolder(true)}
@@ -2307,13 +2436,22 @@ export default function CollectionsPage() {
                       <p className="text-sm text-zinc-400 max-w-sm mb-6">
                         Upload your first photos to this album or create sub-albums to organize your content.
                       </p>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center justify-center gap-3">
                         <Button
                           onClick={() => setShowPhotoUpload(true)}
                           className="rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold text-xs sm:text-sm px-5"
                         >
                           <Plus className="w-4 h-4 mr-2" />
                           Upload Photos
+                        </Button>
+                        <Button
+                          onClick={handleSyncFromCloudinary}
+                          disabled={syncingCloudinary}
+                          variant="outline"
+                          className="rounded-xl border-zinc-800 hover:bg-zinc-900 text-zinc-300 text-xs sm:text-sm px-5"
+                        >
+                          <RefreshCw className={`w-4 h-4 mr-2 text-zinc-400 ${syncingCloudinary ? 'animate-spin' : ''}`} />
+                          {syncingCloudinary ? 'Syncing...' : 'Sync from Cloudinary'}
                         </Button>
                         <Button
                           onClick={() => setShowCreateFolder(true)}
@@ -2368,13 +2506,7 @@ export default function CollectionsPage() {
                                 </div>
 
                                 {/* Thumbnail */}
-                                <Image
-                                  src={getThumbnailUrl(photo.image_id, 450)}
-                                  alt={photo.alt || photo.title}
-                                  fill
-                                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                                />
+                                <CollectionPhotoThumbnail photo={photo} />
 
                                 {/* Top-Right Badges */}
                                 <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
@@ -3177,9 +3309,10 @@ export default function CollectionsPage() {
               {/* Image */}
               <div className="relative h-[48vh] sm:h-[56vh] lg:h-[68vh] rounded-lg overflow-hidden bg-muted">
                 <Image
-                  src={getOptimizedImageUrl(selectedPhoto.image_id, 1800)}
+                  src={selectedPhoto.image_id && !selectedPhoto.image_id.startsWith('/uploads/') ? getOptimizedImageUrl(selectedPhoto.image_id, 1800) : (selectedPhoto.image_url || '/file.svg')}
                   alt={selectedPhoto.alt || selectedPhoto.title}
                   fill
+                  unoptimized={Boolean(selectedPhoto.image_url?.startsWith('http') || selectedPhoto.image_id?.includes('cloudinary'))}
                   sizes="(max-width: 1024px) 100vw, 65vw"
                   className="object-contain"
                   priority
@@ -3312,9 +3445,10 @@ export default function CollectionsPage() {
                   <div className="space-y-3">
                     <div className="relative aspect-square rounded-lg overflow-hidden bg-muted border">
                       <Image
-                        src={getOptimizedImageUrl(editingPhoto.image_id, 900)}
+                        src={editingPhoto.image_id && !editingPhoto.image_id.startsWith('/uploads/') ? getOptimizedImageUrl(editingPhoto.image_id, 900) : (editingPhoto.image_url || '/file.svg')}
                         alt={editingPhoto.alt || editingPhoto.title}
                         fill
+                        unoptimized={Boolean(editingPhoto.image_url?.startsWith('http') || editingPhoto.image_id?.includes('cloudinary'))}
                         className="object-cover"
                       />
                     </div>

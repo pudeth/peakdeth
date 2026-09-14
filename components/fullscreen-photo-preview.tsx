@@ -421,7 +421,12 @@ export function FullscreenPhotoPreview({
                 }}
                 onError={(e) => {
                   console.error('Image failed to load:', getOptimizedImageUrl(photo.imageId, 1920), e)
-                  setIsLoading(false)
+                  const target = e.currentTarget as HTMLImageElement
+                  if (photo.imageUrl && target.src !== photo.imageUrl) {
+                    target.src = photo.imageUrl
+                  } else {
+                    setIsLoading(false)
+                  }
                 }}
                 draggable={false}
               />

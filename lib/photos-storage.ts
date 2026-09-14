@@ -43,7 +43,12 @@ export async function getStoredPhotos(): Promise<Photo[]> {
       if (!error && data && data.length > 0) {
         return data as Photo[]
       }
-    } catch {}
+      if (error) {
+        console.warn('getStoredPhotos Supabase error:', error.message)
+      }
+    } catch (e) {
+      console.warn('getStoredPhotos exception:', e)
+    }
   }
 
   let photos = await readJsonFile<Photo[]>(PHOTOS_FILE, [])
@@ -140,10 +145,14 @@ export async function insertStoredPhotos(newPhotos: Partial<Photo>[]): Promise<P
     try {
       const { createAdminClient } = await import('@/lib/supabase/server')
       const supabase = createAdminClient()
-      const { error } = await supabase.from('photos').upsert(created, { onConflict: 'id' })
-      if (error) {
-        console.error('CRITICAL: Supabase photos insert error:', error)
-        throw new Error(`Failed to save photos to Supabase: ${error.message}`)
+      const chunkSize = 25
+      for (let i = 0; i < created.length; i += chunkSize) {
+        const chunk = created.slice(i, i + chunkSize)
+        const { error } = await supabase.from('photos').upsert(chunk, { onConflict: 'id' })
+        if (error) {
+          console.error('CRITICAL: Supabase photos insert error:', error)
+          throw new Error(`Failed to save photos to Supabase: ${error.message}`)
+        }
       }
     } catch (e: any) {
       console.error('Failed to mirror photos to Supabase:', e)
@@ -457,10 +466,15 @@ export async function getStoredCollectionPhotos(): Promise<CollectionPhoto[]> {
           collection_id: cp.collection_id,
           photo_id: cp.photo_id,
           order: cp.order ?? idx,
-          created_at: new Date().toISOString(),
+          created_at: cp.created_at || new Date().toISOString(),
         }))
       }
-    } catch {}
+      if (error) {
+        console.warn('getStoredCollectionPhotos Supabase error:', error.message)
+      }
+    } catch (e) {
+      console.warn('getStoredCollectionPhotos exception:', e)
+    }
   }
 
   return await readJsonFile<CollectionPhoto[]>(COLLECTION_PHOTOS_FILE, [])
@@ -507,13 +521,17 @@ export async function linkStoredPhotosToCollection(
         order: typeof c.order === 'number' ? c.order : idx,
       }))
 
-      const { error } = await supabase
-        .from('collection_photos')
-        .upsert(dbLinks, { onConflict: 'collection_id,photo_id' })
+      const chunkSize = 25
+      for (let i = 0; i < dbLinks.length; i += chunkSize) {
+        const chunk = dbLinks.slice(i, i + chunkSize)
+        const { error } = await supabase
+          .from('collection_photos')
+          .upsert(chunk, { onConflict: 'collection_id,photo_id' })
 
-      if (error) {
-        console.error('CRITICAL: Supabase collection_photos link error:', error)
-        throw new Error(`Failed to link photos to collection in Supabase: ${error.message}`)
+        if (error) {
+          console.error('CRITICAL: Supabase collection_photos link error:', error)
+          throw new Error(`Failed to link photos to collection in Supabase: ${error.message}`)
+        }
       }
     } catch (e: any) {
       console.error('Failed to link collection_photos in Supabase:', e)

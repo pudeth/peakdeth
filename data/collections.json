@@ -2,24 +2,71 @@
   {
     "id": "894c5928-02da-4bcb-9a45-bce289c26860",
     "title": "Trip",
+    "name": "Trip",
     "slug": "trip",
     "description": "",
+    "cover_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789373871/rithychanvirak/collections/family/qctrlhg5yzotcxmuc6hh.jpg",
+    "cover_image_id": null,
+    "parent_id": null,
     "featured": true,
     "order": 0,
-    "created_at": "2026-09-11T09:09:59.202Z",
-    "updated_at": "2026-09-14T08:35:00.000Z",
-    "cover_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789373871/rithychanvirak/collections/family/qctrlhg5yzotcxmuc6hh.jpg"
+    "created_at": "2026-09-13T16:04:30.373809+00:00",
+    "updated_at": "2026-09-13T16:04:30.373809+00:00"
   },
   {
     "id": "0afe9a09-dde9-4d19-a3ad-8e400c75f6e6",
     "title": "Family",
+    "name": "Family",
     "slug": "family",
     "description": "",
+    "cover_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789373871/rithychanvirak/collections/family/qctrlhg5yzotcxmuc6hh.jpg",
+    "cover_image_id": null,
     "parent_id": "894c5928-02da-4bcb-9a45-bce289c26860",
     "featured": false,
     "order": 0,
-    "created_at": "2026-09-11T09:10:20.999Z",
-    "updated_at": "2026-09-14T08:35:00.000Z",
-    "cover_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789373871/rithychanvirak/collections/family/qctrlhg5yzotcxmuc6hh.jpg"
+    "created_at": "2026-09-13T16:04:30.677482+00:00",
+    "updated_at": "2026-09-13T16:04:30.677482+00:00"
+  },
+  {
+    "id": "c4db4a35-44dc-40d6-bc17-8b9785c446d4",
+    "title": "Jastin",
+    "name": "Jastin",
+    "slug": "jastin",
+    "description": "",
+    "cover_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789382702/rithychanvirak/collections/jastin/a2mc3juw7ue48przpbaa.jpg",
+    "cover_image_id": null,
+    "parent_id": "894c5928-02da-4bcb-9a45-bce289c26860",
+    "featured": false,
+    "order": 0,
+    "created_at": "2026-09-14T14:23:17.664865+00:00",
+    "updated_at": "2026-09-14T14:23:17.664865+00:00"
+  },
+  {
+    "id": "fe51d2c1-ead0-4ade-ab24-88098264a6fe",
+    "title": "Ba",
+    "name": "Ba",
+    "slug": "ba",
+    "description": "",
+    "cover_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789315235/rithychanvirak/collections/ba-1/qxuwerrhixysvlm4qdvn.jpg",
+    "cover_image_id": null,
+    "parent_id": "894c5928-02da-4bcb-9a45-bce289c26860",
+    "featured": false,
+    "order": 0,
+    "created_at": "2026-09-14T14:23:18.820389+00:00",
+    "updated_at": "2026-09-14T14:23:18.820389+00:00"
+  },
+  {
+    "id": "d886de4c-a961-4895-a632-0cad5728b0d3",
+    "title": "Ba 1",
+    "name": "Ba 1",
+    "slug": "ba-1",
+    "description": "",
+    "cover_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789315235/rithychanvirak/collections/ba-1/qxuwerrhixysvlm4qdvn.jpg",
+    "cover_image_id": null,
+    "parent_id": "894c5928-02da-4bcb-9a45-bce289c26860",
+    "featured": false,
+    "order": 0,
+    "created_at": "2026-09-14T14:23:19.783409+00:00",
+    "updated_at": "2026-09-14T14:23:19.783409+00:00"
   }
 ]

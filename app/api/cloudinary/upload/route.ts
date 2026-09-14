@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { getCloudinaryConfig } from '@/lib/cloudinary-config'
 import { writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import crypto from 'node:crypto'
@@ -27,12 +28,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME
-    const apiKey = process.env.CLOUDINARY_API_KEY ?? process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY
-    const apiSecret = process.env.CLOUDINARY_API_SECRET
+    const { cloudName, apiKey, apiSecret, isConfigured } = getCloudinaryConfig()
 
     // 1. Direct Cloudinary Upload (Recommended & Serverless-Safe)
-    if (cloudName && apiKey && apiSecret && !cloudName.includes('placeholder')) {
+    if (isConfigured) {
       const timestamp = Math.round(Date.now() / 1000)
       const strToSign = `timestamp=${timestamp}${apiSecret}`
       const signature = crypto.createHash('sha1').update(strToSign).digest('hex')

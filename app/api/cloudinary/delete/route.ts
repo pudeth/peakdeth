@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { getCloudinaryConfig } from '@/lib/cloudinary-config'
 
 interface DeleteRequestBody {
   publicIds?: string[]
@@ -31,17 +32,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME
-    const apiKey = process.env.CLOUDINARY_API_KEY ?? process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY
-    const apiSecret = process.env.CLOUDINARY_API_SECRET
-
-    const isPlaceholder =
-      !cloudName ||
-      !apiKey ||
-      !apiSecret ||
-      cloudName.includes('placeholder') ||
-      apiKey.includes('placeholder') ||
-      apiSecret.includes('placeholder')
+    const { cloudName, apiKey, apiSecret, isConfigured } = getCloudinaryConfig()
+    const isPlaceholder = !isConfigured
 
     const body = (await request.json().catch(() => ({}))) as DeleteRequestBody
     const publicIds = Array.isArray(body.publicIds)

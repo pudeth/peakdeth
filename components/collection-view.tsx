@@ -260,6 +260,7 @@ export function CollectionView({ collection, photos }: CollectionViewProps) {
                                   src={getThumbnailFromSource(url, 1200)}
                                   alt={subCollection.title}
                                   fill
+                                  unoptimized={url?.startsWith('http')}
                                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                   className={`object-cover absolute inset-0 transition-transform duration-700 ${transformClass}`}
                                   loading={index < 3 && isTop ? 'eager' : 'lazy'}
@@ -404,6 +405,7 @@ export function CollectionView({ collection, photos }: CollectionViewProps) {
                     src={getThumbnailFromSource(photo.image_url, 800)}
                     alt={photo.title || 'Photo'}
                     fill
+                    unoptimized={photo.image_url?.startsWith('http')}
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     loading={index < 8 ? 'eager' : 'lazy'}
