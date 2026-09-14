@@ -236,10 +236,9 @@ async function getAboutData(): Promise<AboutData> {
       const { data, error: aboutError } = await supabase
         .from('about_content')
         .select('*')
-        .eq('is_active', true)
-        .single()
-      if (!aboutError && data) {
-        aboutContent = data
+        .limit(1)
+      if (!aboutError && data && data.length > 0) {
+        aboutContent = data[0]
       }
     }
 
@@ -314,7 +313,7 @@ async function getAboutData(): Promise<AboutData> {
       name: aboutContent.name || DEFAULT_ABOUT_DATA.name,
       tagline: aboutContent.tagline || DEFAULT_ABOUT_DATA.tagline,
       bio: aboutContent.bio || DEFAULT_ABOUT_DATA.bio,
-      profile_image_url: aboutContent.profile_image_url || undefined,
+      profile_image_url: aboutContent.profile_image_url || aboutContent.image_url || undefined,
       experience,
       skills,
       awards,

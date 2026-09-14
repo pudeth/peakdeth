@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       revalidatePath('/')
       revalidatePath('/about')
       revalidatePath('/admin/dashboard/content')
+      revalidatePath('/admin/dashboard/homepage')
     } catch {}
 
     return NextResponse.json({ success: true, about })

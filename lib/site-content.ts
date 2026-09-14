@@ -155,20 +155,23 @@ export async function getAboutContent(): Promise<AboutContentData> {
       const { data, error } = await supabase
         .from('about_content')
         .select('*')
-        .eq('is_active', true)
-        .single()
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-      if (!error && data && data.name) {
+      if (!error && data) {
+        const localData = await readLocalData()
+        const img = data.image_url || data.profile_image_url || localData.about?.profile_image_url || null
         return {
           id: data.id,
-          title: data.title,
-          name: data.name,
-          tagline: data.tagline,
-          bio: data.bio || data.content,
-          profile_image_url: data.profile_image_url,
-          profile_image_id: data.profile_image_id,
-          show_on_homepage: data.show_on_homepage ?? false,
-          is_active: data.is_active ?? true,
+          title: data.title || 'About Me',
+          name: localData.about?.name || 'Peak Deth',
+          tagline: data.subtitle || localData.about?.tagline || 'Full-Stack Programming & Cinematic Photography Design',
+          bio: data.bio || localData.about?.bio || '',
+          profile_image_url: img,
+          profile_image_id: img,
+          show_on_homepage: localData.about?.show_on_homepage ?? true,
+          is_active: true,
           updated_at: data.updated_at,
         }
       }
@@ -179,20 +182,11 @@ export async function getAboutContent(): Promise<AboutContentData> {
 
   const localData = await readLocalData()
   let about = DEFAULT_ABOUT
-  if (localData.about && localData.about.name) {
+  if (localData.about && (localData.about.name || localData.about.title)) {
     about = {
       ...DEFAULT_ABOUT,
       ...localData.about,
-      show_on_homepage: localData.about.show_on_homepage ?? false,
-    }
-  }
-
-  // Guard against missing local upload profile image returning 404
-  if (about.profile_image_url && about.profile_image_url.startsWith('/uploads/')) {
-    const filePath = path.join(process.cwd(), 'public', about.profile_image_url)
-    if (!existsSync(filePath)) {
-      about.profile_image_url = null
-      about.profile_image_id = null
+      show_on_homepage: localData.about.show_on_homepage ?? true,
     }
   }
 
@@ -218,17 +212,14 @@ export async function saveAboutContentServer(about: AboutContentData): Promise<A
     try {
       const { createAdminClient } = await import('@/lib/supabase/server')
       const supabase = createAdminClient()
+      const img = updatedAbout.profile_image_url || null
       await supabase.from('about_content').upsert({
-        id: updatedAbout.id,
+        id: updatedAbout.id || 'about-1',
         title: updatedAbout.title,
-        name: updatedAbout.name,
-        tagline: updatedAbout.tagline || null,
+        subtitle: updatedAbout.tagline || null,
         bio: updatedAbout.bio || null,
-        content: updatedAbout.bio || null,
-        profile_image_url: updatedAbout.profile_image_url || null,
-        profile_image_id: updatedAbout.profile_image_id || null,
-        show_on_homepage: updatedAbout.show_on_homepage,
-        is_active: true,
+        image_url: img,
+        updated_at: new Date().toISOString(),
       })
     } catch (e) {
       console.warn('Failed to sync about content to Supabase (local copy saved):', e)
