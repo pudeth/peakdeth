@@ -112,15 +112,24 @@ export function CloudinaryBulkUpload({ onUploadComplete, folder }: CloudinaryBul
         location = `${exif.latitude.toFixed(6)}, ${exif.longitude.toFixed(6)}`
       }
 
-      // Extract date taken
-      const date_taken = exif.DateTimeOriginal || exif.CreateDate || undefined
+      // Extract date taken safely
+      let cleanDateTaken: string | undefined = undefined
+      const rawDate = exif.DateTimeOriginal || exif.CreateDate
+      if (rawDate) {
+        try {
+          const d = new Date(rawDate)
+          if (!isNaN(d.getTime())) {
+            cleanDateTaken = d.toISOString()
+          }
+        } catch {}
+      }
 
       return {
         camera,
         lens,
         settings: Object.keys(settings).length > 0 ? settings : undefined,
         location,
-        date_taken: date_taken ? new Date(date_taken).toISOString() : undefined,
+        date_taken: cleanDateTaken,
       }
     } catch (error) {
       console.warn('Failed to extract EXIF data:', error)

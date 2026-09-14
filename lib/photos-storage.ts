@@ -88,45 +88,66 @@ export async function saveStoredPhotos(photos: Photo[]): Promise<Photo[]> {
   return photos
 }
 
-export async function insertStoredPhotos(newPhotos: Partial<Photo>[]): Promise<Photo[]> {
-  const existing = await getStoredPhotos()
+function sanitizePhotoData(p: Partial<Photo>, defaultOrder: number): Photo {
+  const id = p.id || crypto.randomUUID()
   const now = new Date().toISOString()
 
-  const created: Photo[] = newPhotos.map((p, idx) => {
-    const id = p.id || crypto.randomUUID()
-    return {
-      id,
-      title: p.title || `Photo ${Date.now() + idx}`,
-      image_url: p.image_url || '',
-      image_id: p.image_id || p.image_url || '',
-      image_width: p.image_width,
-      image_height: p.image_height,
-      alt: p.alt || p.title || '',
-      caption: p.caption,
-      description: p.description,
-      camera: p.camera,
-      lens: p.lens,
-      settings: p.settings || {},
-      location: p.location,
-      date_taken: p.date_taken,
-      featured: p.featured ?? false,
-      order: typeof p.order === 'number' ? p.order : existing.length + idx,
-      created_at: p.created_at || now,
-      updated_at: now,
+  let cleanDateTaken: string | undefined = undefined
+  if (p.date_taken && typeof p.date_taken === 'string' && p.date_taken.trim() !== '') {
+    const d = new Date(p.date_taken)
+    if (!isNaN(d.getTime())) {
+      cleanDateTaken = d.toISOString()
     }
-  })
+  }
+
+  const width = typeof p.image_width === 'number' && !isNaN(p.image_width) ? Math.round(p.image_width) : 1200
+  const height = typeof p.image_height === 'number' && !isNaN(p.image_height) ? Math.round(p.image_height) : 800
+
+  return {
+    id,
+    title: p.title?.trim() || `Photo ${Date.now()}`,
+    image_url: p.image_url || '',
+    image_id: p.image_id || p.image_url || '',
+    image_width: width,
+    image_height: height,
+    alt: p.alt || p.title || '',
+    caption: p.caption || undefined,
+    description: p.description || undefined,
+    camera: p.camera || undefined,
+    lens: p.lens || undefined,
+    settings: (p.settings && typeof p.settings === 'object') ? p.settings : {},
+    location: p.location || undefined,
+    date_taken: cleanDateTaken,
+    featured: Boolean(p.featured),
+    order: typeof p.order === 'number' ? p.order : defaultOrder,
+    created_at: p.created_at || now,
+    updated_at: now,
+  }
+}
+
+export async function insertStoredPhotos(newPhotos: Partial<Photo>[]): Promise<Photo[]> {
+  const existing = await getStoredPhotos()
+
+  const created: Photo[] = newPhotos.map((p, idx) =>
+    sanitizePhotoData(p, existing.length + idx)
+  )
 
   const updatedList = [...created, ...existing]
   await writeJsonFile(PHOTOS_FILE, updatedList)
 
-  // Try mirroring to Supabase if valid
+  // Mirror to Supabase if configured
   if (!isSupabasePlaceholder()) {
     try {
       const { createAdminClient } = await import('@/lib/supabase/server')
       const supabase = createAdminClient()
-      await supabase.from('photos').insert(created)
-    } catch (e) {
-      console.warn('Failed to mirror photos to Supabase:', e)
+      const { error } = await supabase.from('photos').upsert(created, { onConflict: 'id' })
+      if (error) {
+        console.error('CRITICAL: Supabase photos insert error:', error)
+        throw new Error(`Failed to save photos to Supabase: ${error.message}`)
+      }
+    } catch (e: any) {
+      console.error('Failed to mirror photos to Supabase:', e)
+      throw e
     }
   }
 
@@ -138,9 +159,19 @@ export async function updateStoredPhoto(id: string, updates: Partial<Photo>): Pr
   const index = photos.findIndex(p => p.id === id)
   if (index === -1) return null
 
+  const cleanUpdates = { ...updates }
+  if (cleanUpdates.date_taken !== undefined) {
+    if (cleanUpdates.date_taken && typeof cleanUpdates.date_taken === 'string' && cleanUpdates.date_taken.trim() !== '') {
+      const d = new Date(cleanUpdates.date_taken)
+      cleanUpdates.date_taken = !isNaN(d.getTime()) ? d.toISOString() : undefined
+    } else {
+      cleanUpdates.date_taken = undefined
+    }
+  }
+
   const updated: Photo = {
     ...photos[index],
-    ...updates,
+    ...cleanUpdates,
     updated_at: new Date().toISOString(),
   }
   photos[index] = updated
@@ -150,9 +181,14 @@ export async function updateStoredPhoto(id: string, updates: Partial<Photo>): Pr
     try {
       const { createAdminClient } = await import('@/lib/supabase/server')
       const supabase = createAdminClient()
-      await supabase.from('photos').update(updates).eq('id', id)
-    } catch (e) {
-      console.warn('Failed to mirror photo update to Supabase:', e)
+      const { error } = await supabase.from('photos').update(cleanUpdates).eq('id', id)
+      if (error) {
+        console.error('Failed to update photo in Supabase:', error)
+        throw new Error(`Failed to update photo in Supabase: ${error.message}`)
+      }
+    } catch (e: any) {
+      console.error('Failed to mirror photo update to Supabase:', e)
+      throw e
     }
   }
 
@@ -174,9 +210,14 @@ export async function deleteStoredPhotos(ids: string[]): Promise<boolean> {
     try {
       const { createAdminClient } = await import('@/lib/supabase/server')
       const supabase = createAdminClient()
-      await supabase.from('photos').delete().in('id', ids)
-    } catch (e) {
-      console.warn('Failed to mirror photo delete to Supabase:', e)
+      const { error } = await supabase.from('photos').delete().in('id', ids)
+      if (error) {
+        console.error('Failed to delete photos in Supabase:', error)
+        throw new Error(`Failed to delete photos in Supabase: ${error.message}`)
+      }
+    } catch (e: any) {
+      console.error('Failed to mirror photo delete to Supabase:', e)
+      throw e
     }
   }
 
@@ -428,12 +469,14 @@ export async function getStoredCollectionPhotos(): Promise<CollectionPhoto[]> {
 export async function linkStoredPhotosToCollection(
   links: { collection_id: string; photo_id: string; order?: number }[]
 ): Promise<CollectionPhoto[]> {
+  const validLinks = links.filter(l => Boolean(l.collection_id && l.photo_id))
+  if (validLinks.length === 0) return []
+
   const existing = await getStoredCollectionPhotos()
   const now = new Date().toISOString()
   const created: CollectionPhoto[] = []
 
-  for (const item of links) {
-    if (!item.collection_id || !item.photo_id) continue
+  for (const item of validLinks) {
     const alreadyLinked = existing.some(
       l => l.collection_id === item.collection_id && l.photo_id === item.photo_id
     )
@@ -452,23 +495,39 @@ export async function linkStoredPhotosToCollection(
 
   await writeJsonFile(COLLECTION_PHOTOS_FILE, existing)
 
-  if (!isSupabasePlaceholder() && created.length > 0) {
+  // Mirror links to Supabase if configured
+  if (!isSupabasePlaceholder()) {
     try {
       const { createAdminClient } = await import('@/lib/supabase/server')
       const supabase = createAdminClient()
-      await supabase.from('collection_photos').insert(
-        created.map(c => ({
-          collection_id: c.collection_id,
-          photo_id: c.photo_id,
-          order: c.order,
-        }))
-      )
-    } catch (e) {
-      console.warn('Failed to mirror collection_photos to Supabase:', e)
+
+      const dbLinks = validLinks.map((c, idx) => ({
+        collection_id: c.collection_id,
+        photo_id: c.photo_id,
+        order: typeof c.order === 'number' ? c.order : idx,
+      }))
+
+      const { error } = await supabase
+        .from('collection_photos')
+        .upsert(dbLinks, { onConflict: 'collection_id,photo_id' })
+
+      if (error) {
+        console.error('CRITICAL: Supabase collection_photos link error:', error)
+        throw new Error(`Failed to link photos to collection in Supabase: ${error.message}`)
+      }
+    } catch (e: any) {
+      console.error('Failed to link collection_photos in Supabase:', e)
+      throw e
     }
   }
 
-  return created
+  return created.length > 0 ? created : validLinks.map((l, idx) => ({
+    id: `${l.collection_id}-${l.photo_id}`,
+    collection_id: l.collection_id,
+    photo_id: l.photo_id,
+    order: typeof l.order === 'number' ? l.order : idx,
+    created_at: now,
+  }))
 }
 
 export async function unlinkStoredPhotos(collection_id: string, photo_ids?: string[]): Promise<boolean> {
@@ -494,9 +553,14 @@ export async function unlinkStoredPhotos(collection_id: string, photo_ids?: stri
       if (photo_ids && photo_ids.length > 0) {
         query = query.in('photo_id', photo_ids)
       }
-      await query
-    } catch (e) {
-      console.warn('Failed to mirror unlink to Supabase:', e)
+      const { error } = await query
+      if (error) {
+        console.error('CRITICAL: Failed to unlink photos in Supabase:', error)
+        throw new Error(`Failed to unlink photos in Supabase: ${error.message}`)
+      }
+    } catch (e: any) {
+      console.error('Failed to mirror unlink to Supabase:', e)
+      throw e
     }
   }
 

@@ -1343,21 +1343,31 @@ export default function CollectionsPage() {
     }
 
     try {
-      // First, save photos to the photos table
-      const photosToInsert = uploadedImages.map((img, index) => ({
-        title: img.name || `Photo ${Date.now() + index}`,
-        image_url: img.image_url,
-        image_id: img.image_id,
-        image_width: img.image_width,
-        image_height: img.image_height,
-        alt: img.name,
-        camera: img.camera,
-        lens: img.lens,
-        settings: img.settings,
-        location: img.location,
-        date_taken: img.date_taken,
-        order: collectionPhotos.length + index
-      }))
+      // First, prepare photos data with sanitized fields
+      const photosToInsert = uploadedImages.map((img, index) => {
+        let date_taken: string | undefined = undefined
+        if (img.date_taken && typeof img.date_taken === 'string' && img.date_taken.trim() !== '') {
+          const d = new Date(img.date_taken)
+          if (!isNaN(d.getTime())) {
+            date_taken = d.toISOString()
+          }
+        }
+
+        return {
+          title: img.name || `Photo ${Date.now() + index}`,
+          image_url: img.image_url,
+          image_id: img.image_id,
+          image_width: img.image_width || 1200,
+          image_height: img.image_height || 800,
+          alt: img.name || '',
+          camera: img.camera,
+          lens: img.lens,
+          settings: img.settings || {},
+          location: img.location,
+          date_taken,
+          order: collectionPhotos.length + index
+        }
+      })
 
       const res = await fetch('/api/photos', {
         method: 'POST',
@@ -1369,6 +1379,9 @@ export default function CollectionsPage() {
       })
 
       if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        console.warn('API /api/photos failed, falling back to direct Supabase:', errJson)
+
         const { data: insertedPhotos, error: photoError } = await supabase
           .from('photos')
           .insert(photosToInsert)
@@ -1386,7 +1399,7 @@ export default function CollectionsPage() {
 
           const { error: associationError } = await supabase
             .from('collection_photos')
-            .insert(collectionPhotosToInsert)
+            .upsert(collectionPhotosToInsert, { onConflict: 'collection_id,photo_id' })
 
           if (associationError) throw associationError
         }
@@ -1401,7 +1414,8 @@ export default function CollectionsPage() {
       await loadAllCollections()
     } catch (error: unknown) {
       console.error('Error adding photos to collection:', error)
-      toast.error('Failed to add photos to collection')
+      const message = error instanceof Error ? error.message : 'Failed to add photos to collection'
+      toast.error(message)
     }
   }
 

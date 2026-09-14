@@ -467,20 +467,30 @@ export default function PhotosManagementPage() {
     try {
       setActionLoading(true)
 
-      const photosToInsert = uploadedImages.map((img, index) => ({
-        title: img.name || `Photo ${Date.now() + index}`,
-        image_url: img.image_url,
-        image_id: img.image_id,
-        image_width: img.image_width,
-        image_height: img.image_height,
-        alt: img.name,
-        camera: img.camera,
-        lens: img.lens,
-        settings: img.settings,
-        location: img.location,
-        date_taken: img.date_taken,
-        order: photos.length + index
-      }))
+      const photosToInsert = uploadedImages.map((img, index) => {
+        let date_taken: string | undefined = undefined
+        if (img.date_taken && typeof img.date_taken === 'string' && img.date_taken.trim() !== '') {
+          const d = new Date(img.date_taken)
+          if (!isNaN(d.getTime())) {
+            date_taken = d.toISOString()
+          }
+        }
+
+        return {
+          title: img.name || `Photo ${Date.now() + index}`,
+          image_url: img.image_url,
+          image_id: img.image_id,
+          image_width: img.image_width || 1200,
+          image_height: img.image_height || 800,
+          alt: img.name || '',
+          camera: img.camera,
+          lens: img.lens,
+          settings: img.settings || {},
+          location: img.location,
+          date_taken,
+          order: photos.length + index
+        }
+      })
 
       const res = await fetch('/api/photos', {
         method: 'POST',
@@ -492,6 +502,9 @@ export default function PhotosManagementPage() {
       })
 
       if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        console.warn('API /api/photos failed, falling back to Supabase:', errJson)
+
         const { data: insertedPhotos, error: photoError } = await supabase
           .from('photos')
           .insert(photosToInsert)
@@ -507,7 +520,11 @@ export default function PhotosManagementPage() {
             order: idx
           }))
 
-          await supabase.from('collection_photos').insert(collectionLinks)
+          const { error: linkErr } = await supabase
+            .from('collection_photos')
+            .upsert(collectionLinks, { onConflict: 'collection_id,photo_id' })
+
+          if (linkErr) throw linkErr
         }
       }
 
@@ -517,7 +534,8 @@ export default function PhotosManagementPage() {
       setShowUploadModal(false)
     } catch (err) {
       console.error('Error during bulk upload:', err)
-      toast.error('Failed to process uploaded photos')
+      const msg = err instanceof Error ? err.message : 'Failed to process uploaded photos'
+      toast.error(msg)
     } finally {
       setActionLoading(false)
     }

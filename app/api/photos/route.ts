@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -89,9 +89,9 @@ export async function POST(request: Request) {
     } catch {}
 
     return NextResponse.json({ success: true, photos: inserted })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in POST /api/photos:', error)
-    return NextResponse.json({ error: 'Failed to save photos' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Failed to save photos' }, { status: 500 })
   }
 }
 
