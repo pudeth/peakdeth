@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   Zap,
   Lock,
-  ExternalLink
+  ExternalLink,
+  Video
 } from 'lucide-react'
 import { WebsitePreviewModal } from '@/components/website-preview-modal'
 import { CardWebsitePreview } from '@/components/card-website-preview'
@@ -32,7 +33,8 @@ interface DeveloperViewProps {
 }
 
 export function DeveloperView({ services: initialServices }: DeveloperViewProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  const isKhmer = language === 'km'
   const [items] = useState<ServiceItem[]>(initialServices || [])
   const [activePreview, setActivePreview] = useState<{ url: string; title: string } | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -73,21 +75,49 @@ export function DeveloperView({ services: initialServices }: DeveloperViewProps)
         tags: t.services.cards.webTags,
       }
     }
+    if (lower.includes('facebook') || lower.includes('fb') || lower.includes('live')) {
+      return {
+        title: isKhmer ? 'ប្រព័ន្ធ Facebook Live' : (service.title || 'Facebook Live System'),
+        description: isKhmer
+          ? 'ប្រព័ន្ធគ្រប់គ្រងការលក់ Live Facebook តាមដានខមមិន កត់ត្រាការកុម្ម៉ង់ស្វ័យប្រវត្តិ និងគ្រប់គ្រងស្តុក។'
+          : (service.description || 'Facebook Live Commerce platform with order tracking and comment replay.'),
+        category: 'live',
+        accent: 'text-blue-400',
+        badgeBg: 'bg-blue-500/10 text-blue-300 border-blue-500/20',
+        glow: 'group-hover:border-blue-500/40 group-hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]',
+        tags: isKhmer ? ['Facebook Live', 'កត់ត្រាការកុម្ម៉ង់', 'តាមដានខមមិន'] : ['Facebook Live', 'Live Commerce', 'Order Tracking'],
+      }
+    }
+    if (lower.includes('mobile') || lower.includes('ios') || lower.includes('android')) {
+      return {
+        title: t.services.cards.mobileTitle,
+        description: t.services.cards.mobileDesc,
+        category: 'mobile',
+        accent: 'text-amber-400',
+        badgeBg: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+        glow: 'group-hover:border-amber-500/40 group-hover:shadow-[0_0_30px_rgba(245,158,11,0.15)]',
+        tags: t.services.cards.mobileTags,
+      }
+    }
     return {
-      title: t.services.cards.mobileTitle || service.title,
-      description: t.services.cards.mobileDesc || service.description,
-      category: 'mobile',
-      accent: 'text-amber-400',
-      badgeBg: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
-      glow: 'group-hover:border-amber-500/40 group-hover:shadow-[0_0_30px_rgba(245,158,11,0.15)]',
-      tags: t.services.cards.mobileTags,
+      title: service.title,
+      description: service.description || '',
+      category: 'custom',
+      accent: 'text-emerald-400',
+      badgeBg: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
+      glow: 'group-hover:border-emerald-500/40 group-hover:shadow-[0_0_30px_rgba(52,211,153,0.15)]',
+      tags: isKhmer ? ['ប្រព័ន្ធផ្ទាល់', 'Cloud API'] : ['Live System', 'Cloud API'],
     }
   }
 
   const renderServiceIcon = (service: ServiceItem, iconClass = 'w-4 h-4') => {
     const title = (service.title || '').toLowerCase()
+    const link = (service.link || '').toLowerCase()
     const icon = (service.icon || '').toLowerCase()
 
+    if (title.includes('facebook') || title.includes('fb') || link.includes('fb') || link.includes('facebook')) {
+      return <Video className={`${iconClass} text-blue-400`} />
+    }
     if (title.includes('pos') || title.includes('billing') || icon === '💳' || icon === 'pos') {
       return <CreditCard className={`${iconClass} text-cyan-400`} />
     }
