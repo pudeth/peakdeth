@@ -48,6 +48,7 @@ export async function POST(request: Request) {
 
     try {
       revalidatePath('/')
+      revalidatePath('/admin/dashboard/homepage')
       revalidatePath('/admin/dashboard/content')
     } catch {}
 

@@ -73,18 +73,20 @@ export async function getHeroContent(): Promise<HeroContentData> {
       const { data, error } = await supabase
         .from('hero_content')
         .select('*')
-        .eq('is_active', true)
-        .single()
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
       if (!error && data && data.title) {
+        const bgUrl = data.background_image || data.background_image_url || null
         return {
           id: data.id,
           title: data.title,
-          subtitle: data.subtitle,
-          background_image_url: data.background_image_url,
-          background_image_id: data.background_image_id,
-          overlay_opacity: data.overlay_opacity ?? 0.5,
-          is_active: data.is_active ?? true,
+          subtitle: data.subtitle || '',
+          background_image_url: bgUrl,
+          background_image_id: bgUrl,
+          overlay_opacity: 0.5,
+          is_active: true,
           updated_at: data.updated_at,
         }
       }
@@ -99,15 +101,6 @@ export async function getHeroContent(): Promise<HeroContentData> {
     hero = {
       ...DEFAULT_HERO,
       ...localData.hero,
-    }
-  }
-
-  // Guard against missing local upload image files returning 404
-  if (hero.background_image_url && hero.background_image_url.startsWith('/uploads/')) {
-    const filePath = path.join(process.cwd(), 'public', hero.background_image_url)
-    if (!existsSync(filePath)) {
-      hero.background_image_url = null
-      hero.background_image_id = null
     }
   }
 
@@ -132,14 +125,13 @@ export async function saveHeroContentServer(hero: HeroContentData): Promise<Hero
     try {
       const { createAdminClient } = await import('@/lib/supabase/server')
       const supabase = createAdminClient()
+      const img = updatedHero.background_image_url || null
       await supabase.from('hero_content').upsert({
-        id: updatedHero.id,
+        id: updatedHero.id || 'hero-1',
         title: updatedHero.title,
-        subtitle: updatedHero.subtitle,
-        background_image_url: updatedHero.background_image_url || null,
-        background_image_id: updatedHero.background_image_id || null,
-        overlay_opacity: updatedHero.overlay_opacity,
-        is_active: true,
+        subtitle: updatedHero.subtitle || null,
+        background_image: img,
+        updated_at: new Date().toISOString(),
       })
     } catch (e) {
       console.warn('Failed to sync hero content to Supabase (local copy saved):', e)

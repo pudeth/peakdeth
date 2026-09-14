@@ -3,11 +3,11 @@
     "id": "hero-1",
     "title": "PEAK DETH",
     "subtitle": "Software Developer & Cameraman • POS, Systems, Web & Mobile Apps • Cinematic Photography & Video Production",
-    "background_image_url": "/uploads/1789182800174_c0dac79b.gif",
-    "background_image_id": "/uploads/1789182800174_c0dac79b.gif",
+    "background_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789399670/rithychanvirak/hero/tdbl5byamua9tjnt8yie.gif",
+    "background_image_id": "rithychanvirak/hero/tdbl5byamua9tjnt8yie",
     "overlay_opacity": 0.5,
     "is_active": true,
-    "updated_at": "2026-09-12T03:13:22.129Z"
+    "updated_at": "2026-09-14T15:28:49.522Z"
   },
   "contacts": [
     {
