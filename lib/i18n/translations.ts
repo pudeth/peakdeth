@@ -109,6 +109,14 @@ export interface TranslationDictionary {
     filterAll: string
     filterFeatured: string
     filterWithSubAlbums: string
+    tabAlbums: string
+    tabPhotos: string
+    filterMainAlbums: string
+    filterSubAlbums: string
+    filterByAlbum: string
+    allPhotosFilter: string
+    loadMorePhotos: string
+    showingPhotosCount: string
     photosLabel: string
     albumsLabel: string
     albumFallback: string
@@ -308,6 +316,14 @@ export const translations: Record<Language, TranslationDictionary> = {
       filterAll: 'All',
       filterFeatured: 'Featured',
       filterWithSubAlbums: 'With Sub-Albums',
+      tabAlbums: 'Albums',
+      tabPhotos: 'All Photos',
+      filterMainAlbums: 'Main Categories',
+      filterSubAlbums: 'Sub-Albums',
+      filterByAlbum: 'Filter by Album',
+      allPhotosFilter: 'All Photos',
+      loadMorePhotos: 'Load More Photos',
+      showingPhotosCount: 'Showing {count} of {total} photos',
       photosLabel: 'Photos',
       albumsLabel: 'Albums',
       albumFallback: 'Album',
@@ -505,6 +521,14 @@ export const translations: Record<Language, TranslationDictionary> = {
       filterAll: 'ទាំងអស់',
       filterFeatured: 'ពិសេស',
       filterWithSubAlbums: 'មានអាល់ប៊ុមរង',
+      tabAlbums: 'អាល់ប៊ុម',
+      tabPhotos: 'រូបថតទាំងអស់',
+      filterMainAlbums: 'អាល់ប៊ុមចម្បង',
+      filterSubAlbums: 'អាល់ប៊ុមរង',
+      filterByAlbum: 'ចម្រាញ់តាមអាល់ប៊ុម',
+      allPhotosFilter: 'រូបថតទាំងអស់',
+      loadMorePhotos: 'មើលរូបថតបន្ថែម',
+      showingPhotosCount: 'បង្ហាញ {count} នៃ {total} សន្លឹក',
       photosLabel: 'រូបថត',
       albumsLabel: 'អាល់ប៊ុម',
       albumFallback: 'អាល់ប៊ុម',
@@ -702,6 +726,14 @@ export const translations: Record<Language, TranslationDictionary> = {
       filterAll: '全部',
       filterFeatured: '精选',
       filterWithSubAlbums: '含子相册',
+      tabAlbums: '相册',
+      tabPhotos: '全部照片',
+      filterMainAlbums: '主相册',
+      filterSubAlbums: '子相册',
+      filterByAlbum: '按相册筛选',
+      allPhotosFilter: '全部照片',
+      loadMorePhotos: '加载更多照片',
+      showingPhotosCount: '显示 {count} / {total} 张照片',
       photosLabel: '张照片',
       albumsLabel: '个相册',
       albumFallback: '相册',

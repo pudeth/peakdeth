@@ -10,6 +10,13 @@ export interface CollectionWithStats extends Collection {
   directPhotosCount: number
   subAlbums: number
   previewPhotos: string[]
+  parentTitle?: string
+}
+
+export interface GalleryPhoto extends Photo {
+  collection_id?: string
+  collection_title?: string
+  collection_slug?: string
 }
 
 export interface CollectionDetailData {
@@ -283,12 +290,17 @@ export async function getCollectionsHierarchy(): Promise<{
       finalPreviews = [col.cover_image_url, ...filtered].slice(0, 3)
     }
 
+    const parentCol = col.parent_id
+      ? allCollections.find((c) => c.id === col.parent_id)
+      : undefined
+
     collectionsMap.set(col.id, {
       ...col,
       totalPhotos: stats.totalPhotos,
       directPhotosCount: stats.directPhotosCount,
       subAlbums: stats.subAlbums,
       previewPhotos: finalPreviews,
+      parentTitle: parentCol?.title,
     })
   }
 
@@ -323,21 +335,115 @@ export async function getFeaturedCollections(): Promise<CollectionWithStats[]> {
   return featured.slice(0, 9)
 }
 
-
 /**
  * Fetch all gallery collections for /gallery page.
+ * Returns all albums (both main and sub-albums) with parentTitle, plus accurate total photos count.
  */
 export async function getGalleryCollections(): Promise<{
   collections: CollectionWithStats[]
+  allCollections: CollectionWithStats[]
+  rootCollections: CollectionWithStats[]
   totalPhotosCount: number
 }> {
-  const { rootCollections } = await getCollectionsHierarchy()
-  const totalPhotosCount = rootCollections.reduce((sum, col) => sum + col.totalPhotos, 0)
+  const { allCollections, rootCollections, collectionsMap } = await getCollectionsHierarchy()
+  const enrichedAll = allCollections
+    .map((c) => collectionsMap.get(c.id)!)
+    .filter(Boolean)
+    .sort((a, b) => {
+      // Main categories first, then sub-albums
+      if (!a.parent_id && b.parent_id) return -1
+      if (a.parent_id && !b.parent_id) return 1
+      return (a.order ?? 0) - (b.order ?? 0)
+    })
+
+  const supabase = await getSafeSupabaseClient()
+  let totalPhotosCount = 0
+  if (supabase) {
+    try {
+      const { count } = await supabase.from('photos').select('*', { count: 'exact', head: true })
+      totalPhotosCount = count || 0
+    } catch {}
+  }
+  if (!totalPhotosCount) {
+    const stored = await getStoredPhotos()
+    totalPhotosCount = stored.length
+  }
 
   return {
-    collections: rootCollections,
+    collections: enrichedAll,
+    allCollections: enrichedAll,
+    rootCollections,
     totalPhotosCount,
   }
+}
+
+/**
+ * Fetch all photos enriched with collection information for the gallery.
+ */
+export async function getAllPhotosForGallery(): Promise<GalleryPhoto[]> {
+  const supabase = await getSafeSupabaseClient()
+  if (supabase) {
+    try {
+      // Fetch all photos
+      const { data: allDbPhotos } = await supabase
+        .from('photos')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      // Fetch all collection photo links with collection info
+      const { data: links } = await supabase
+        .from('collection_photos')
+        .select(`
+          collection_id,
+          photo_id,
+          collections ( id, title, slug )
+        `)
+
+      const colMapByPhoto = new Map<string, { id: string; title: string; slug: string }>()
+      if (links) {
+        for (const item of links) {
+          const col = item.collections as unknown as { id: string; title: string; slug: string } | null
+          if (col && !colMapByPhoto.has(item.photo_id)) {
+            colMapByPhoto.set(item.photo_id, col)
+          }
+        }
+      }
+
+      if (allDbPhotos && allDbPhotos.length > 0) {
+        return allDbPhotos.map((p) => {
+          const col = colMapByPhoto.get(p.id)
+          return {
+            ...p,
+            collection_id: col?.id,
+            collection_title: col?.title,
+            collection_slug: col?.slug,
+          }
+        })
+      }
+    } catch (err) {
+      console.error('Error fetching all photos for gallery:', err)
+    }
+  }
+
+  // Fallback to local files
+  const [storedPhotos, storedLinks, storedCols] = await Promise.all([
+    getStoredPhotos(),
+    getStoredCollectionPhotos(),
+    getStoredCollections(),
+  ])
+  const colLookup = new Map(storedCols.map((c) => [c.id, c]))
+  const linkLookup = new Map(storedLinks.map((l) => [l.photo_id, l.collection_id]))
+
+  return storedPhotos.map((p) => {
+    const colId = linkLookup.get(p.id)
+    const col = colId ? colLookup.get(colId) : undefined
+    return {
+      ...p,
+      collection_id: colId,
+      collection_title: col?.title,
+      collection_slug: col?.slug,
+    }
+  })
 }
 
 /**
@@ -426,6 +532,63 @@ export async function getCollectionDetail(slug: string): Promise<CollectionDetai
         })
         .filter(Boolean) as Photo[]
     } catch {}
+  }
+
+  // If direct photos are empty, aggregate photos from all child collections
+  if (photos.length === 0 && childIds.length > 0) {
+    const allDescendantIds = new Set<string>()
+    const q = [...childIds]
+    while (q.length > 0) {
+      const cur = q.shift()!
+      allDescendantIds.add(cur)
+      const nextChildren = childrenMap.get(cur) || []
+      for (const nc of nextChildren) q.push(nc)
+    }
+
+    if (supabase) {
+      try {
+        const { data: descendantPhotoLinks } = await supabase
+          .from('collection_photos')
+          .select(`
+            order,
+            photos (*)
+          `)
+          .in('collection_id', Array.from(allDescendantIds))
+          .order('order', { ascending: true })
+
+        const photoLinks = (descendantPhotoLinks || []) as unknown as { photos: Photo | Photo[] | null }[]
+        const seen = new Set<string>()
+        photos = photoLinks
+          .map((link) => {
+            const raw = link.photos
+            return Array.isArray(raw) ? raw[0] : raw
+          })
+          .filter((p): p is Photo => {
+            if (!p || seen.has(p.id)) return false
+            seen.add(p.id)
+            return true
+          })
+      } catch {}
+    }
+
+    if (photos.length === 0) {
+      const [allStoredPhotos, allStoredLinks] = await Promise.all([
+        getStoredPhotos(),
+        getStoredCollectionPhotos(),
+      ])
+      const colLinks = allStoredLinks
+        .filter((l) => allDescendantIds.has(l.collection_id))
+        .sort((a, b) => a.order - b.order)
+      const photoMap = new Map(allStoredPhotos.map((p) => [p.id, p]))
+      const seen = new Set<string>()
+      photos = colLinks
+        .map((l) => photoMap.get(l.photo_id))
+        .filter((p): p is Photo => {
+          if (!p || seen.has(p.id)) return false
+          seen.add(p.id)
+          return true
+        })
+    }
   }
 
   if (photos.length === 0) {

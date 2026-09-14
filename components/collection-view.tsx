@@ -282,13 +282,13 @@ export function CollectionView({ collection, photos }: CollectionViewProps) {
                         )
                       })()}
 
-                      {/* Gradient Overlay - smooth reveal on hover */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 ease-out pointer-events-none z-40"></div>
+                      {/* Base Scrim Gradient - always visible for high contrast */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-30 pointer-events-none transition-opacity duration-500 group-hover:from-black/95 group-hover:via-black/50" />
 
-                      {/* Content - reveals on hover */}
-                      <div className="absolute inset-0 p-5 sm:p-6 flex flex-col justify-end translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out pointer-events-none z-40">
+                      {/* Content - always visible */}
+                      <div className="absolute inset-0 p-5 sm:p-6 flex flex-col justify-end z-40 pointer-events-none">
                         <h3
-                          className="text-xl sm:text-2xl font-bold text-white mb-2 line-clamp-2 drop-shadow-md"
+                          className="text-xl sm:text-2xl font-bold text-white mb-2 line-clamp-2 drop-shadow-md group-hover:text-zinc-100 transition-colors"
                           style={{
                             fontFamily: '"Kantumruy Pro", sans-serif',
                           }}
