@@ -4,11 +4,11 @@
     "title": "Trip",
     "slug": "trip",
     "description": "",
-    "featured": false,
+    "featured": true,
     "order": 0,
     "created_at": "2026-09-11T09:09:59.202Z",
-    "updated_at": "2026-09-11T09:09:59.202Z",
-    "cover_image_url": "/uploads/1789118081221_49d856f1.JPG"
+    "updated_at": "2026-09-14T08:35:00.000Z",
+    "cover_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789373871/rithychanvirak/collections/family/qctrlhg5yzotcxmuc6hh.jpg"
   },
   {
     "id": "0afe9a09-dde9-4d19-a3ad-8e400c75f6e6",
@@ -19,7 +19,7 @@
     "featured": false,
     "order": 0,
     "created_at": "2026-09-11T09:10:20.999Z",
-    "updated_at": "2026-09-11T09:11:45.777Z",
-    "cover_image_url": "/uploads/1789118081221_49d856f1.JPG"
+    "updated_at": "2026-09-14T08:35:00.000Z",
+    "cover_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789373871/rithychanvirak/collections/family/qctrlhg5yzotcxmuc6hh.jpg"
   }
 ]
