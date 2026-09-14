@@ -30,6 +30,16 @@ export function Services({ services: initialServices }: { services: ServiceItem[
         if (cached) {
           const parsed = JSON.parse(cached)
           if (Array.isArray(parsed) && parsed.length > 0) {
+            // Check for stale cache that had duplicate weppage-1 links or old Management System title
+            const links = parsed.map((s: any) => s?.link).filter(Boolean)
+            const weppageCount = links.filter((l: string) => typeof l === 'string' && l.includes('weppage-1.onrender.com')).length
+            const isStale = weppageCount > 1 || parsed.some((s: any) => s?.title === 'Management System' || s?.link === 'https://weppage-1.onrender.com/')
+
+            if (isStale) {
+              localStorage.removeItem('site_services_cache')
+              return
+            }
+
             const isOldService = (title?: string) =>
               !title || /photography|videography|retouching|portrait|wedding|event|commercial & editorial/i.test(title)
 
@@ -64,7 +74,7 @@ export function Services({ services: initialServices }: { services: ServiceItem[
 
   const getLocalizedService = (service: ServiceItem) => {
     const lower = (service.title || '').toLowerCase()
-    if (lower.includes('pos')) {
+    if (lower.includes('pos') || lower.includes('billing')) {
       return {
         title: t.services.cards.posTitle,
         description: t.services.cards.posDesc,
@@ -74,7 +84,7 @@ export function Services({ services: initialServices }: { services: ServiceItem[
         tags: t.services.cards.posTags,
       }
     }
-    if (lower.includes('diamond') || lower.includes('top-up') || lower.includes('top up')) {
+    if (lower.includes('diamond') || lower.includes('top-up') || lower.includes('top up') || lower.includes('mlbb') || lower.includes('game')) {
       return {
         title: t.services.cards.topupTitle,
         description: t.services.cards.topupDesc,
@@ -84,7 +94,18 @@ export function Services({ services: initialServices }: { services: ServiceItem[
         tags: t.services.cards.topupTags,
       }
     }
-    if (lower.includes('web') || lower.includes('store') || lower.includes('phone') || lower.includes('app')) {
+    // Check mobile BEFORE web/app so "Mobile App" never matches "app" inside web
+    if (lower.includes('mobile') || lower.includes('ios') || lower.includes('android')) {
+      return {
+        title: t.services.cards.mobileTitle,
+        description: t.services.cards.mobileDesc,
+        accent: 'text-amber-400',
+        badgeBg: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+        glow: 'group-hover:border-amber-500/40 group-hover:shadow-[0_0_30px_rgba(245,158,11,0.12)]',
+        tags: t.services.cards.mobileTags,
+      }
+    }
+    if (lower.includes('web') || lower.includes('store') || lower.includes('phone') || lower.includes('app') || lower.includes('site')) {
       return {
         title: t.services.cards.webTitle,
         description: t.services.cards.webDesc,
@@ -92,6 +113,27 @@ export function Services({ services: initialServices }: { services: ServiceItem[
         badgeBg: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
         glow: 'group-hover:border-emerald-500/40 group-hover:shadow-[0_0_30px_rgba(52,211,153,0.12)]',
         tags: t.services.cards.webTags,
+      }
+    }
+    // Position-based intelligent fallback
+    if (service.number === 2) {
+      return {
+        title: t.services.cards.topupTitle,
+        description: t.services.cards.topupDesc,
+        accent: 'text-purple-400',
+        badgeBg: 'bg-purple-500/10 text-purple-300 border-purple-500/20',
+        glow: 'group-hover:border-purple-500/40 group-hover:shadow-[0_0_30px_rgba(168,85,247,0.12)]',
+        tags: t.services.cards.topupTags,
+      }
+    }
+    if (service.number === 4) {
+      return {
+        title: t.services.cards.mobileTitle,
+        description: t.services.cards.mobileDesc,
+        accent: 'text-amber-400',
+        badgeBg: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+        glow: 'group-hover:border-amber-500/40 group-hover:shadow-[0_0_30px_rgba(245,158,11,0.12)]',
+        tags: t.services.cards.mobileTags,
       }
     }
     return {
@@ -226,7 +268,7 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                   </div>
 
                   {/* Mobile Actions Bar */}
-                  {service.link && (
+                  {service.link ? (
                     <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-300">
                       <button
                         type="button"
@@ -251,6 +293,21 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                         <ArrowUpRight className="w-4 h-4" />
                       </a>
                     </div>
+                  ) : (
+                    <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-300">
+                      <span className="font-mono text-[11px] flex items-center gap-1.5 text-amber-400 font-medium select-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        {t.services.availableForBuild}
+                      </span>
+
+                      <a
+                        href="/contact"
+                        className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500 hover:text-black text-xs font-semibold text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                      >
+                        <span>{t.services.inquireBtn}</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
                   )}
                 </div>
 
@@ -263,7 +320,41 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                       onOpenPreview={() => setActivePreview({ url: service.link!, title: localized.title })}
                     />
                   ) : (
-                    <div className="w-full h-full bg-zinc-950" />
+                    <div className="w-full h-full flex flex-col justify-between p-4 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black select-none">
+                      <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 pb-2 border-b border-white/5">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          NODE #{String(service.number).padStart(2, '0')}
+                        </span>
+                        <span className="text-zinc-500">LATENCY: 12ms</span>
+                      </div>
+                      <div className="space-y-2.5">
+                        <div className="p-3 rounded-xl bg-zinc-900/90 border border-white/10 shadow-lg">
+                          <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1">
+                            <span className="font-mono">Real-time Cloud Node</span>
+                            <span className="text-amber-400 font-mono text-[10px]">+24.8%</span>
+                          </div>
+                          <div className="text-lg font-bold text-white font-mono">$128,490</div>
+                          <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-2">
+                            <div className="bg-gradient-to-r from-amber-500 to-emerald-400 h-full w-[82%] rounded-full" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="p-2.5 rounded-xl bg-zinc-900/70 border border-white/5">
+                            <span className="text-[10px] text-zinc-500 block font-mono">App Sync</span>
+                            <span className="text-xs font-bold text-emerald-400 font-mono">99.9% Live</span>
+                          </div>
+                          <div className="p-2.5 rounded-xl bg-zinc-900/70 border border-white/5">
+                            <span className="text-[10px] text-zinc-500 block font-mono">Native Build</span>
+                            <span className="text-xs font-bold text-amber-300 font-mono">Custom OS</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-white/10 flex justify-between items-center text-[10px] text-zinc-500 font-mono">
+                        <span className="text-amber-400 font-medium">NODE ONLINE</span>
+                        <span className="text-emerald-400">UPTIME 99.98%</span>
+                      </div>
+                    </div>
                   )}
 
                   {/* Text & Actions Overlay - HIDDEN by default, SHOWS BACK on hover */}
@@ -296,7 +387,7 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                     </div>
 
                     {/* Bottom Actions Bar */}
-                    {service.link && (
+                    {service.link ? (
                       <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-300">
                         <span className="font-mono text-[11px] flex items-center gap-1.5 text-emerald-400 font-medium select-none">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -327,6 +418,21 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                             <ArrowUpRight className="w-3.5 h-3.5" />
                           </a>
                         </div>
+                      </div>
+                    ) : (
+                      <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-300">
+                        <span className="font-mono text-[11px] flex items-center gap-1.5 text-amber-400 font-medium select-none">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          {t.services.availableForBuild}
+                        </span>
+
+                        <a
+                          href="/contact"
+                          className="px-2.5 py-1.5 rounded-md bg-amber-500/20 hover:bg-amber-500 hover:text-black text-[11px] font-semibold tracking-wide text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 shadow-sm"
+                        >
+                          <span>{t.services.inquireBtn}</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </a>
                       </div>
                     )}
                   </div>

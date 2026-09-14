@@ -329,7 +329,41 @@ export function DeveloperView({ services: initialServices }: DeveloperViewProps)
                         onOpenPreview={() => setActivePreview({ url: service.link!, title: localized.title })}
                       />
                     ) : (
-                      <div className="w-full h-full bg-zinc-950" />
+                      <div className="w-full h-full flex flex-col justify-between p-4 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black select-none">
+                        <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 pb-2 border-b border-white/5">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            NODE #{String(service.number).padStart(2, '0')}
+                          </span>
+                          <span className="text-zinc-500">LATENCY: 12ms</span>
+                        </div>
+                        <div className="space-y-2.5">
+                          <div className="p-3 rounded-xl bg-zinc-900/90 border border-white/10 shadow-lg">
+                            <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1">
+                              <span className="font-mono">Real-time Cloud Node</span>
+                              <span className="text-amber-400 font-mono text-[10px]">+24.8%</span>
+                            </div>
+                            <div className="text-lg font-bold text-white font-mono">$128,490</div>
+                            <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-2">
+                              <div className="bg-gradient-to-r from-amber-500 to-emerald-400 h-full w-[82%] rounded-full" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="p-2.5 rounded-xl bg-zinc-900/70 border border-white/5">
+                              <span className="text-[10px] text-zinc-500 block font-mono">App Sync</span>
+                              <span className="text-xs font-bold text-emerald-400 font-mono">99.9% Live</span>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-zinc-900/70 border border-white/5">
+                              <span className="text-[10px] text-zinc-500 block font-mono">Native Build</span>
+                              <span className="text-xs font-bold text-amber-300 font-mono">Custom OS</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="pt-2 border-t border-white/10 flex justify-between items-center text-[10px] text-zinc-500 font-mono">
+                          <span className="text-amber-400 font-medium">NODE ONLINE</span>
+                          <span className="text-emerald-400">UPTIME 99.98%</span>
+                        </div>
+                      </div>
                     )}
 
                     {/* Text & Actions Overlay - HIDDEN by default, SHOWS BACK on hover */}
@@ -362,7 +396,7 @@ export function DeveloperView({ services: initialServices }: DeveloperViewProps)
                       </div>
 
                       {/* Bottom Actions Bar */}
-                      {service.link && (
+                      {service.link ? (
                         <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-300">
                           <span className="font-mono text-[11px] flex items-center gap-1.5 text-emerald-400 font-medium select-none">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -393,6 +427,21 @@ export function DeveloperView({ services: initialServices }: DeveloperViewProps)
                               <ArrowUpRight className="w-3.5 h-3.5" />
                             </a>
                           </div>
+                        </div>
+                      ) : (
+                        <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-300">
+                          <span className="font-mono text-[11px] flex items-center gap-1.5 text-amber-400 font-medium select-none">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                            {t.services.availableForBuild}
+                          </span>
+
+                          <a
+                            href="/contact"
+                            className="px-2.5 py-1.5 rounded-md bg-amber-500/20 hover:bg-amber-500 hover:text-black text-[11px] font-semibold tracking-wide text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 shadow-sm"
+                          >
+                            <span>{t.services.inquireBtn}</span>
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                          </a>
                         </div>
                       )}
                     </div>

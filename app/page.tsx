@@ -40,18 +40,18 @@ const DEFAULT_SERVICES = [
   {
     _id: 'service-3',
     number: 3,
-    title: 'Website',
-    description: 'High-performance responsive websites, e-commerce platforms, web applications, and modern digital interfaces.',
+    title: 'Web-APP',
+    description: 'Smartphone & digital electronics store e-commerce management system, modern responsive web application.',
     icon: 'web',
-    link: 'https://weppage-1.onrender.com/home.html'
+    link: 'https://dymaly-store.onrender.com'
   },
   {
     _id: 'service-4',
     number: 4,
-    title: 'Mobile App',
-    description: 'Native and cross-platform mobile apps for iOS and Android with intuitive UI/UX and seamless performance.',
+    title: 'Mobile App & Custom System',
+    description: 'Cross-platform iOS & Android mobile development, specialized business dashboards, and custom software systems.',
     icon: 'mobile',
-    link: 'https://weppage-1.onrender.com/'
+    link: '/demo/mobile'
   }
 ]
 
