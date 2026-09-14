@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { isConfiguredSupabase } from '@/lib/supabase/config'
 import {
   Image as ImageIcon, Video, FolderOpen, ArrowUpRight, Clock,
   Activity, Settings, Zap, Camera, Upload, Edit3, Globe, AlertCircle, RefreshCw, Phone, Home, User
@@ -65,8 +66,7 @@ export default function DashboardPage() {
       }
 
       // 2. Fallback to direct Supabase if API returned empty and Supabase is configured
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const isPlaceholder = !supabaseUrl || supabaseUrl.includes('placeholder')
+      const isPlaceholder = !isConfiguredSupabase()
       if (!isPlaceholder && (photosList.length === 0 || collectionsList.length === 0 || videosList.length === 0)) {
         try {
           const [photosData, videosData, collectionsData] = await Promise.all([

@@ -21,9 +21,10 @@ export interface CollectionDetailData {
   photos: Photo[]
 }
 
+import { isConfiguredSupabase } from '@/lib/supabase/config'
+
 function isSupabasePlaceholder(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  return !url || url.includes('placeholder')
+  return !isConfiguredSupabase()
 }
 
 async function getSafeSupabaseClient() {

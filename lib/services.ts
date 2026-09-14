@@ -62,9 +62,11 @@ export const DEFAULT_SERVICES: ServiceItem[] = [
   }
 ]
 
+import { isConfiguredSupabase } from '@/lib/supabase/config'
+
 function isConnectionOrPlaceholderError(error: unknown): boolean {
   if (!error) return false
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder')) return true
+  if (!isConfiguredSupabase()) return true
   const msg = typeof error === 'string' ? error : (error as { message?: string })?.message || ''
   return msg.includes('fetch failed') || msg.includes('Failed to fetch')
 }
