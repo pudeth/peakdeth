@@ -192,6 +192,29 @@ export function Services({ services: initialServices }: { services: ServiceItem[
           </span>
         </div>
 
+        {/* Developer Cluster Telemetry Status Ribbon */}
+        <div className="mb-5 px-4 py-2.5 rounded-xl bg-zinc-900/60 border border-white/[0.08] flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-zinc-400">
+          <div className="flex items-center gap-2.5">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              SYSTEM CLUSTER ONLINE
+            </span>
+            <span className="text-zinc-600 hidden md:inline">•</span>
+            <span className="hidden md:inline text-zinc-300">
+              NODES: <span className="text-emerald-400">4/4 LIVE</span>
+            </span>
+            <span className="text-zinc-600 hidden sm:inline">•</span>
+            <span className="hidden sm:inline text-zinc-400">
+              ROUTING: <span className="text-cyan-400">EDGE REVERSE PROXY</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-zinc-400">
+            <span>AVG LATENCY: <span className="text-emerald-400">18ms</span></span>
+            <span className="text-zinc-600 hidden sm:inline">•</span>
+            <span className="hidden sm:inline">SSL: <span className="text-emerald-400">TLS 1.3 / ENCRYPTED</span></span>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {items.slice(0, 4).map((service, index) => {
             const localized = getLocalizedService(service)
@@ -225,7 +248,7 @@ export function Services({ services: initialServices }: { services: ServiceItem[
                     <Lock className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
                     <span className="truncate">
                       {service.link
-                        ? service.link.replace(/^https?:\/\//, '').replace(/\/$/, '')
+                        ? (service.link.startsWith('/') ? 'mobile-app.peakdeth.com' : service.link.replace(/^https?:\/\//, '').replace(/\/$/, ''))
                         : localized.title}
                     </span>
                   </div>
