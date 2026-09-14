@@ -84,6 +84,18 @@ export async function POST(request: Request) {
 
       try {
         const adminSupabase = createAdminClient()
+        // Sync deletions: remove rows from Supabase that are no longer in normalizedServices
+        const keepIds = normalizedServices.map((item: any) => item.id).filter(Boolean)
+        const { data: existingRows } = await adminSupabase.from('services').select('id')
+        if (existingRows && existingRows.length > 0) {
+          const toDelete = existingRows
+            .map((r: any) => r.id)
+            .filter((id: string) => !keepIds.includes(id))
+          if (toDelete.length > 0) {
+            await adminSupabase.from('services').delete().in('id', toDelete)
+          }
+        }
+
         for (const item of normalizedServices) {
           await adminSupabase.from('services').upsert({
             id: item.id,
@@ -116,5 +128,66 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Failed to save services:', error)
     return NextResponse.json({ error: 'Failed to save services' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const cookieStore = await cookies()
+    const isDevAdmin = cookieStore.get('admin_dev_session')?.value === 'true'
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if ((authError || !user) && !isDevAdmin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    let id = searchParams.get('id')
+
+    if (!id) {
+      try {
+        const body = await request.json()
+        id = body.id || body._id
+      } catch {}
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: 'Service ID is required' }, { status: 400 })
+    }
+
+    // 1. Delete from local JSON storage
+    try {
+      const local = await readLocalServices()
+      const filtered = local.filter((s: any) => s.id !== id && s._id !== id)
+      await writeLocalServices(filtered)
+    } catch (e) {
+      console.warn('Failed to delete from local storage:', e)
+    }
+
+    // 2. Delete from Supabase
+    try {
+      const adminSupabase = createAdminClient()
+      await adminSupabase.from('services').delete().eq('id', id)
+    } catch (err) {
+      console.warn('Supabase services delete failed:', err)
+    }
+
+    try {
+      revalidatePath('/')
+      revalidatePath('/developer')
+      revalidatePath('/admin/dashboard/developer')
+      revalidatePath('/admin/dashboard/homepage')
+      revalidatePath('/admin/dashboard/content')
+    } catch {}
+
+    return NextResponse.json({ success: true, deletedId: id })
+  } catch (error) {
+    console.error('Failed to delete service:', error)
+    return NextResponse.json({ error: 'Failed to delete service' }, { status: 500 })
   }
 }

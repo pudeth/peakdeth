@@ -382,7 +382,7 @@ export default function ManageHomepagePage() {
   }
 
   // Save Services list
-  const handleSaveServices = async (updatedList?: ServiceItem[]) => {
+  const handleSaveServices = async (updatedList?: ServiceItem[], quiet = false) => {
     const listToSave = updatedList || services
     try {
       setSaving(true)
@@ -393,7 +393,7 @@ export default function ManageHomepagePage() {
       })
 
       if (!res.ok) throw new Error('Failed to save services')
-      toast.success('Developer Live Systems updated successfully')
+      if (!quiet) toast.success('Developer Live Systems updated successfully')
     } catch (error: any) {
       toast.error(error.message || 'Error saving services')
     } finally {
@@ -438,9 +438,33 @@ export default function ManageHomepagePage() {
   // Delete service
   const handleDeleteService = async (id?: string) => {
     if (!id) return
-    const updated = services.filter(s => s.id !== id && s._id !== id)
-    setServices(updated)
-    await handleSaveServices(updated)
+    if (!confirm('Are you sure you want to delete this developer system?')) return
+    try {
+      setSaving(true)
+      // Call dedicated DELETE API
+      const res = await fetch(`/api/services?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to delete system from server')
+      }
+
+      const updated = services
+        .filter(s => s.id !== id && s._id !== id)
+        .map((s, idx) => ({
+          ...s,
+          number: idx + 1,
+          order: idx + 1,
+        }))
+      setServices(updated)
+      await handleSaveServices(updated, true)
+      toast.success('Developer system deleted successfully')
+    } catch (error: any) {
+      toast.error(error.message || 'Error deleting service')
+    } finally {
+      setSaving(false)
+    }
   }
 
   // Reset to default 4 production services
@@ -1082,6 +1106,18 @@ export default function ManageHomepagePage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => {
+                          const targetId = editingService.id || editingService._id
+                          setEditingService(null)
+                          if (targetId) handleDeleteService(targetId)
+                        }}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl text-xs"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setEditingService(null)}
                         className="rounded-xl"
                       >
@@ -1249,8 +1285,13 @@ export default function ManageHomepagePage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteService(service.id || service._id)}
-                        className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-7 w-7 p-0 rounded-lg"
+                        title="Delete this system"
+                        disabled={saving}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteService(service.id || service._id)
+                        }}
+                        className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-7 w-7 p-0 rounded-lg transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>

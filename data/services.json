@@ -1,0 +1,50 @@
+[
+  {
+    "id": "service-1",
+    "_id": "service-1",
+    "number": 1,
+    "title": "POS",
+    "description": "Point of sale software with real-time inventory tracking, smart billing, payments, and sales analytics.",
+    "icon": "pos",
+    "link": "https://weppage-1.onrender.com/home.html",
+    "show_on_homepage": true,
+    "is_active": true,
+    "order": 1
+  },
+  {
+    "id": "service-2",
+    "_id": "service-2",
+    "number": 2,
+    "title": "Top-Up Diamond",
+    "description": "Mobile Legends Bang Bang diamond top-up platform with instant account validation and automated payments.",
+    "icon": "diamond",
+    "link": "https://mlbb-topup-jet.vercel.app/",
+    "show_on_homepage": true,
+    "is_active": true,
+    "order": 2
+  },
+  {
+    "id": "service-3",
+    "_id": "service-3",
+    "number": 3,
+    "title": "Web-APP",
+    "description": "Management Phone Store system, modern responsive web applications and digital interfaces.",
+    "icon": "web",
+    "link": "https://dymaly-store.onrender.com",
+    "show_on_homepage": true,
+    "is_active": true,
+    "order": 3
+  },
+  {
+    "id": "service-4",
+    "_id": "service-4",
+    "number": 4,
+    "title": "Mobile App & Custom System",
+    "description": "Cross-platform iOS & Android mobile development, specialized business dashboards, and custom software systems.",
+    "icon": "mobile",
+    "link": "/demo/mobile",
+    "show_on_homepage": true,
+    "is_active": true,
+    "order": 4
+  }
+]

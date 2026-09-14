@@ -186,6 +186,13 @@ export default function DeveloperManagementPage() {
 
   // Delete Service
   const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to permanently delete this system?')) return
+    try {
+      await fetch(`/api/services?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+    } catch (e) {
+      console.warn('Direct delete API call failed:', e)
+    }
+
     const updated = services.filter(s => s.id !== id && s._id !== id)
     const reindexed = updated.map((s, idx) => ({
       ...s,
