@@ -183,7 +183,7 @@ export default function ManageHomepagePage() {
     bio: 'A multidisciplinary Full-Stack Developer and Visual Artist bridging high-performance software engineering with cinematic photography and design. Dedicated to architecting robust enterprise systems, bespoke POS solutions, and modern mobile & web apps, while capturing evocative visual narratives and crafting refined aesthetic designs.',
     profile_image_url: null,
     profile_image_id: null,
-    show_on_homepage: true,
+    show_on_homepage: false,
   })
 
   // Services state
@@ -343,7 +343,7 @@ export default function ManageHomepagePage() {
               bio: aboutJson.about.bio || '',
               profile_image_url: aboutJson.about.profile_image_url || null,
               profile_image_id: aboutJson.about.profile_image_id || null,
-              show_on_homepage: aboutJson.about.show_on_homepage ?? true,
+              show_on_homepage: aboutJson.about.show_on_homepage ?? false,
             })
           }
         }

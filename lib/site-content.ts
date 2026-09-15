@@ -170,7 +170,7 @@ export async function getAboutContent(): Promise<AboutContentData> {
           bio: data.bio || localData.about?.bio || '',
           profile_image_url: img,
           profile_image_id: img,
-          show_on_homepage: localData.about?.show_on_homepage ?? true,
+          show_on_homepage: localData.about?.show_on_homepage ?? false,
           is_active: true,
           updated_at: data.updated_at,
         }
@@ -186,7 +186,7 @@ export async function getAboutContent(): Promise<AboutContentData> {
     about = {
       ...DEFAULT_ABOUT,
       ...localData.about,
-      show_on_homepage: localData.about.show_on_homepage ?? true,
+      show_on_homepage: localData.about.show_on_homepage ?? false,
     }
   }
 
@@ -199,7 +199,7 @@ export async function saveAboutContentServer(about: AboutContentData): Promise<A
     ...DEFAULT_ABOUT,
     ...(localData.about || {}),
     ...about,
-    show_on_homepage: about.show_on_homepage ?? (localData.about?.show_on_homepage ?? true),
+    show_on_homepage: about.show_on_homepage ?? (localData.about?.show_on_homepage ?? false),
     updated_at: new Date().toISOString(),
   }
 

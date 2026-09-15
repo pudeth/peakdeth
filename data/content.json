@@ -74,7 +74,7 @@
     "bio": "A multidisciplinary Full-Stack Developer and Visual Artist bridging high-performance software engineering with cinematic photography and design. Dedicated to architecting robust enterprise systems, bespoke POS solutions, and modern mobile & web apps, while capturing evocative visual narratives and crafting refined aesthetic designs.",
     "profile_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1789400163/rithychanvirak/about/ympwqhhl5rpjw27yttdk.jpg",
     "profile_image_id": "rithychanvirak/about/ympwqhhl5rpjw27yttdk",
-    "show_on_homepage": true,
+    "show_on_homepage": false,
     "is_active": true,
     "updated_at": "2026-09-13T10:02:00.000Z"
   }

@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       bio: bio || null,
       profile_image_url: profile_image_url || null,
       profile_image_id: profile_image_id || null,
-      show_on_homepage: typeof show_on_homepage === 'boolean' ? show_on_homepage : true,
+      show_on_homepage: typeof show_on_homepage === 'boolean' ? show_on_homepage : false,
     })
 
     try {
