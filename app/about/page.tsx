@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { Award, Camera, ArrowUpRight, CheckCircle2, MapPin, Film, Briefcase, ChevronRight, Mail } from 'lucide-react'
+import { Award, Camera, ArrowUpRight, CheckCircle2, MapPin, Film, Briefcase, ChevronRight, Mail, FileText } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/client'
@@ -49,7 +49,7 @@ const DEFAULT_ABOUT_DATA: AboutData = {
   name: 'Peak Deth',
   tagline: 'Full-Stack Programming & Cinematic Photography Design',
   bio: 'A multidisciplinary Full-Stack Developer and Visual Artist bridging high-performance software engineering with cinematic photography and design. Dedicated to architecting robust enterprise systems, bespoke POS solutions, and modern mobile & web apps, while capturing evocative visual narratives and crafting refined aesthetic designs.',
-  profile_image_url: undefined,
+  profile_image_url: '/images/pfp/profile-real.jpg',
   experience: [
     {
       title: 'Senior Systems Architect & Full-Stack Engineer',
@@ -313,7 +313,7 @@ async function getAboutData(): Promise<AboutData> {
       name: aboutContent.name || DEFAULT_ABOUT_DATA.name,
       tagline: aboutContent.tagline || DEFAULT_ABOUT_DATA.tagline,
       bio: aboutContent.bio || DEFAULT_ABOUT_DATA.bio,
-      profile_image_url: aboutContent.profile_image_url || aboutContent.image_url || undefined,
+      profile_image_url: aboutContent.profile_image_url || aboutContent.image_url || DEFAULT_ABOUT_DATA.profile_image_url,
       experience,
       skills,
       awards,
@@ -474,6 +474,13 @@ export default function AboutPage() {
               >
                 <span>{t.aboutPage.initiateProject}</span>
                 <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </Link>
+              <Link
+                href="/cv"
+                className={`inline-flex items-center gap-2 px-5 py-3.5 rounded-full bg-[#df862b]/15 border border-[#df862b]/40 text-[#df862b] text-sm font-semibold hover:bg-[#df862b] hover:text-white transition-all shadow-lg shadow-[#df862b]/10 ${isKhmer ? 'font-khmer' : ''}`}
+              >
+                <FileText className="w-4 h-4" />
+                <span>{t.nav.cv}</span>
               </Link>
               <Link
                 href="/gallery"

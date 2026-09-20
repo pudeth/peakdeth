@@ -165,7 +165,7 @@ const DEFAULT_SERVICES_LIST: Service[] = [
 export default function ContentManagementPage() {
   const supabase = createClient()
   const revalidateContentPages = async () => {
-    await revalidatePublicPaths(['/', '/about', '/contact'])
+    await revalidatePublicPaths(['/', '/about', '/contact', '/cv'])
   }
 
   // State for different content sections

@@ -13,6 +13,7 @@ import {
   Film,
   User,
   Send,
+  FileText,
   ChevronRight,
   Sparkles,
   Menu,
@@ -32,6 +33,7 @@ export function Header() {
   const navLinks = [
     { href: "/", label: t.nav.home },
     { href: "/developer", label: t.nav.services },
+    { href: "/cv", label: t.nav.cv },
     { href: "/gallery", label: t.nav.gallery },
     { href: "/videos", label: t.nav.videos },
     { href: "/about", label: t.nav.about },
@@ -42,6 +44,7 @@ export function Header() {
   const navItems = [
     { href: "/", label: t.nav.home, tag: t.mobileNavTags.home, icon: Home },
     { href: "/developer", label: t.nav.services, tag: t.mobileNavTags.services, icon: Code },
+    { href: "/cv", label: t.nav.cv, tag: t.mobileNavTags.cv, icon: FileText },
     { href: "/gallery", label: t.nav.gallery, tag: t.mobileNavTags.gallery, icon: ImageIcon },
     { href: "/videos", label: t.nav.videos, tag: t.mobileNavTags.videos, icon: Film },
     { href: "/about", label: t.nav.about, tag: t.mobileNavTags.about, icon: User },

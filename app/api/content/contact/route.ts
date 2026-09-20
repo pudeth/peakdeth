@@ -106,6 +106,7 @@ export async function POST(request: Request) {
     try {
       revalidatePath('/')
       revalidatePath('/contact')
+      revalidatePath('/cv')
       revalidatePath('/admin/dashboard/content')
       revalidatePath('/admin/dashboard/contact')
     } catch {}

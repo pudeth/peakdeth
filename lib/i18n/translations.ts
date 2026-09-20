@@ -7,6 +7,7 @@ export interface TranslationDictionary {
     gallery: string
     videos: string
     about: string
+    cv: string
     contact: string
   }
   mobileNavTags: {
@@ -15,6 +16,7 @@ export interface TranslationDictionary {
     gallery: string
     videos: string
     about: string
+    cv: string
     contact: string
   }
   hero: {
@@ -214,6 +216,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       gallery: 'Gallery',
       videos: 'Videos',
       about: 'About',
+      cv: 'CV / Resume',
       contact: 'Contact',
     },
     mobileNavTags: {
@@ -222,6 +225,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       gallery: 'Curated Photography',
       videos: 'Cinematic Motion',
       about: 'Developer Profile',
+      cv: 'Rotha Khoeurn CV',
       contact: 'Start a Project',
     },
     hero: {
@@ -419,6 +423,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       gallery: 'វិចិត្រសាល',
       videos: 'វីដេអូ',
       about: 'អំពីយើង',
+      cv: 'ប្រវត្តិរូប (CV)',
       contact: 'ទំនាក់ទំនង',
     },
     mobileNavTags: {
@@ -427,6 +432,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       gallery: 'ស្នាដៃរូបថតវិចិត្រ',
       videos: 'វីដេអូបែបភាពយន្ត',
       about: 'ប្រវត្តិអ្នកអភិវឌ្ឍន៍',
+      cv: 'ប្រវត្តិរូបសង្ខេប Rotha Khoeurn',
       contact: 'ចាប់ផ្តើមគម្រោងថ្មី',
     },
     hero: {
@@ -624,6 +630,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       gallery: '作品集',
       videos: '视频',
       about: '关于',
+      cv: '个人履历 (CV)',
       contact: '联系我们',
     },
     mobileNavTags: {
@@ -632,6 +639,7 @@ export const translations: Record<Language, TranslationDictionary> = {
       gallery: '精选摄影作品',
       videos: '电影级动态影像',
       about: '开发者档案',
+      cv: 'Rotha Khoeurn 履历表',
       contact: '发起合作项目',
     },
     hero: {

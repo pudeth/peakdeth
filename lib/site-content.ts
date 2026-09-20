@@ -43,8 +43,8 @@ const DEFAULT_ABOUT: AboutContentData = {
   name: 'Peak Deth',
   tagline: 'Full-Stack Programming & Cinematic Photography Design',
   bio: 'A multidisciplinary Full-Stack Developer and Visual Artist bridging high-performance software engineering with cinematic photography and design. Dedicated to architecting robust enterprise systems, bespoke POS solutions, and modern mobile & web apps, while capturing evocative visual narratives and crafting refined aesthetic designs.',
-  profile_image_url: null,
-  profile_image_id: null,
+  profile_image_url: '/images/pfp/profile-real.jpg',
+  profile_image_id: 'local_profile_real',
   show_on_homepage: false,
   is_active: true,
 }
@@ -161,13 +161,13 @@ export async function getAboutContent(): Promise<AboutContentData> {
 
       if (!error && data) {
         const localData = await readLocalData()
-        const img = data.image_url || data.profile_image_url || localData.about?.profile_image_url || null
+        const img = localData.about?.profile_image_url || data.profile_image_url || data.image_url || null
         return {
           id: data.id,
-          title: data.title || 'About Me',
+          title: localData.about?.title || data.title || 'About Me',
           name: localData.about?.name || 'Peak Deth',
-          tagline: data.subtitle || localData.about?.tagline || 'Full-Stack Programming & Cinematic Photography Design',
-          bio: data.bio || localData.about?.bio || '',
+          tagline: localData.about?.tagline || data.subtitle || 'Full-Stack Programming & Cinematic Photography Design',
+          bio: localData.about?.bio || data.bio || '',
           profile_image_url: img,
           profile_image_id: img,
           show_on_homepage: localData.about?.show_on_homepage ?? false,
