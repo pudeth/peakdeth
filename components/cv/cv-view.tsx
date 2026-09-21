@@ -12,6 +12,7 @@ import {
   Check,
   Maximize2,
   Minimize2,
+  X,
 } from 'lucide-react'
 import { CVDocument } from './cv-document'
 import { cvData as defaultCvData, CVData } from '@/data/cv-data'
@@ -130,41 +131,43 @@ export function CVView({ initialData }: CVViewProps) {
   return (
     <div
       className={`cv-print-root min-h-screen bg-[#090d13] text-slate-100 ${
-        isFullscreen ? 'pt-4 sm:pt-6' : 'pt-24 sm:pt-32'
+        isFullscreen ? 'pt-2 sm:pt-4' : 'pt-3 sm:pt-6'
       } pb-20 px-0 sm:px-4 print:p-0 print:bg-white print:text-black transition-all duration-300`}
     >
       {/* ── Sticky Toolbar (hidden when printing) ── */}
       <div
-        className={`no-print max-w-5xl mx-auto mb-4 sm:mb-8 ${
-          isFullscreen ? 'sticky top-2 z-30' : 'sticky top-16 sm:top-20 z-30'
+        className={`no-print max-w-5xl mx-auto mb-4 sm:mb-6 ${
+          isFullscreen ? 'sticky top-1 sm:top-2 z-30' : 'sticky top-2 sm:top-4 z-30'
         } px-3 sm:px-0 transition-all duration-300`}
       >
-        <div className="flex items-center justify-between gap-2 p-2.5 sm:p-3 bg-[#141820]/95 backdrop-blur-md rounded-xl border border-slate-800/80 shadow-2xl">
+        <div className="flex items-center justify-between gap-2 p-2 sm:p-2.5 bg-[#141820]/95 backdrop-blur-md rounded-xl border border-slate-800/80 shadow-2xl">
 
-          {/* Left: Back + Title */}
+          {/* Left: Back / Exit + Candidate Title */}
           <div className="flex items-center gap-2 min-w-0">
             <Link
-              href="/about"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0"
+              href="/"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 transition-colors flex-shrink-0 shadow-sm"
+              title="Return to Website"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Back</span>
+              <span className="hidden sm:inline">Back to Site</span>
             </Link>
 
             <div className="h-4 w-px bg-slate-800 flex-shrink-0" />
 
-            <div className="min-w-0">
+            <div className="min-w-0 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse hidden md:inline-block flex-shrink-0" />
               <h1 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 truncate">
                 <span className="truncate">{data.name}</span>
                 <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-[#df862b]/20 text-[#df862b] border border-[#df862b]/30 flex-shrink-0 hidden sm:inline">
-                  CV / Resume
+                  Popup View
                 </span>
               </h1>
             </div>
           </div>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Right: Actions (Zoom, Fullscreen, Print, Share, Close) */}
+          <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
             {/* Zoom Controls — hidden on mobile */}
             <div className="hidden sm:flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800 text-xs text-slate-400">
               <button onClick={zoomOut} title="Zoom Out" className="p-1 hover:text-white transition-colors">
@@ -182,7 +185,7 @@ export function CVView({ initialData }: CVViewProps) {
             {/* Fullscreen Button */}
             <button
               onClick={toggleFullscreen}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-xs font-semibold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 transition-all border border-slate-800 hover:border-slate-700 shadow-sm"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-semibold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 transition-all border border-slate-800 hover:border-slate-700 shadow-sm"
               title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Fullscreen View'}
             >
               {isFullscreen ? (
@@ -201,17 +204,17 @@ export function CVView({ initialData }: CVViewProps) {
             {/* Print button */}
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-bold bg-[#df862b] hover:bg-[#c97521] text-white shadow-lg shadow-[#df862b]/20 transition-all hover:scale-[1.02]"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-bold bg-[#df862b] hover:bg-[#c97521] text-white shadow-lg shadow-[#df862b]/20 transition-all hover:scale-[1.02]"
               title="Print or Save as A4 PDF"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print / Save PDF</span>
+              <span className="hidden xs:inline sm:inline">Print / Save PDF</span>
             </button>
 
             {/* Share button */}
             <button
               onClick={handleShare}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border border-slate-800"
+              className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border border-slate-800"
               title="Share Link"
             >
               {copied ? (
@@ -220,9 +223,19 @@ export function CVView({ initialData }: CVViewProps) {
                 <Share2 className="w-3.5 h-3.5" />
               )}
             </button>
+
+            {/* Close / Return to site X button */}
+            <Link
+              href="/"
+              className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors border border-slate-800"
+              title="Close Popup"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Link>
           </div>
         </div>
       </div>
+
 
       {/* ── CV Document ── */}
       {/* Mobile: full-width, no scale transform. Desktop: centred with zoom. */}

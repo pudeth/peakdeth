@@ -22,13 +22,22 @@ export function LayoutWrapper({
   const isStudioRoute = pathname?.startsWith('/studio')
   const isAdminRoute = pathname?.startsWith('/admin')
   const isPrintRoute = pathname === '/cv/print' || pathname?.startsWith('/cv/print')
+  const isCvRoute = pathname === '/cv' || pathname?.startsWith('/cv')
 
   // Enable scroll restoration
   useScrollRestoration()
 
-  // Don't show header or footer for studio, admin, or print routes
-  if (isStudioRoute || isAdminRoute || isPrintRoute) {
-    return <>{children}</>
+  // Don't show header or footer for studio, admin, print, or dedicated cv popup routes
+  if (isStudioRoute || isAdminRoute || isPrintRoute || isCvRoute) {
+    return (
+      <ErrorBoundary>
+        <LanguageProvider>
+          <NavigationProgress />
+          <ImageProtection />
+          {children}
+        </LanguageProvider>
+      </ErrorBoundary>
+    )
   }
 
   return (
