@@ -15,7 +15,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
   return (
     <div
       id="cv-printable-document"
-      className="print-sheet mx-auto shadow-2xl overflow-hidden font-sans transition-all duration-200 border border-black/20 print:border-none print:shadow-none print:overflow-hidden print:w-[210mm] print:max-w-[210mm] print:h-[297mm]"
+      className="print-sheet mx-auto font-sans transition-all duration-300 relative sm:rounded-2xl overflow-hidden border border-slate-700/80 sm:border-[#df862b]/40 shadow-[0_25px_80px_-15px_rgba(0,0,0,0.95),0_0_50px_-5px_rgba(223,134,43,0.18)] ring-1 ring-white/10 print:border-none print:shadow-none print:ring-0 print:rounded-none print:overflow-hidden print:w-[210mm] print:max-w-[210mm] print:h-[297mm]"
       style={{
         width: '100%',
         maxWidth: '820px',
@@ -23,18 +23,22 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
         color: '#2b2420',
       }}
     >
+      {/* Executive top accent trim (visible on screen) */}
+      <div className="hidden sm:block print:hidden h-1 w-full bg-gradient-to-r from-[#df862b] via-amber-400 to-[#df862b]" />
+
       {/* ================= UNIFIED TWO-COLUMN LAYOUT ================= */}
       <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 min-h-[1100px] print:min-h-0 print:h-[297mm]">
         {/* ================= LEFT COLUMN (57% width on desktop) ================= */}
+        {/* NOTE: order-2 on mobile so right column (name/skills) appears first */}
         <div
-          className="md:col-span-7 print:col-span-7 flex flex-col"
+          className="md:col-span-7 print:col-span-7 flex flex-col order-2 md:order-1 print:order-1"
           style={{ backgroundColor: '#ffffff', color: '#2b2420' }}
         >
-          {/* Left Header Graphic with Circle Photo — Redesigned */}
+          {/* Left Header Graphic with Circle Photo — hidden on mobile, visible md+ and print */}
           <div
-            className="relative overflow-hidden"
+            className="relative overflow-hidden hidden md:block print:block"
             style={{
-              backgroundColor: '#2c231e',
+              backgroundColor: '#2e2520',
               height: '290px',
             }}
           >
@@ -45,22 +49,20 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
               viewBox="0 0 460 290"
             >
               {/* Deep dark base */}
-              <rect width="460" height="290" fill="#1e1713" />
+              <rect width="460" height="290" fill="#1b1410" />
 
               {/* Mocha mid layer */}
-              <rect width="460" height="290" fill="#392d28" />
+              <rect width="460" height="290" fill="#2e2520" />
 
               {/* Top-left large triangular white cut — elegant geometry */}
-              <polygon points="0,0 0,150 110,0" fill="#ffffff" />
+              <polygon points="0,0 0,145 115,0" fill="#ffffff" />
 
-              {/* Thin orange accent line along the triangle hypotenuse */}
-              <line x1="0" y1="150" x2="110" y2="0" stroke="#ff9100" strokeWidth="2.5" opacity="0.9" />
-
-              {/* Small corner accent square */}
-              <rect x="0" y="0" width="18" height="18" fill="#ff9100" opacity="0.85" />
+              {/* Golden accent lines along the triangle hypotenuse */}
+              <line x1="0" y1="145" x2="115" y2="0" stroke="#ff9100" strokeWidth="3" strokeLinecap="round" opacity="0.95" />
+              <line x1="0" y1="152" x2="122" y2="0" stroke="#ff9100" strokeWidth="1" strokeDasharray="3 3" opacity="0.45" />
 
               {/* Bottom-right dark corner block for depth */}
-              <polygon points="460,180 460,290 310,290" fill="#1e1713" opacity="0.5" />
+              <polygon points="460,180 460,290 310,290" fill="#1b1410" opacity="0.5" />
 
               {/* Flowing white wave — bottom sweep */}
               <path
@@ -69,6 +71,17 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
                    C 280,258 370,270 460,290
                    L 460,290 L 0,290 Z"
                 fill="#ffffff"
+              />
+
+              {/* Flowing golden accent line along bottom sweep */}
+              <path
+                d="M 0,235
+                   C 60,230 120,252 200,255
+                   C 280,258 370,270 460,290"
+                fill="none"
+                stroke="#ff9100"
+                strokeWidth="2.5"
+                opacity="0.9"
               />
 
               {/* Subtle inner wave layer for depth */}
@@ -82,8 +95,8 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
               />
 
               {/* Decorative dot grid — top right area */}
-              {[0,1,2,3,4].map((col) =>
-                [0,1,2,3].map((row) => (
+              {[0, 1, 2, 3, 4].map((col) =>
+                [0, 1, 2, 3].map((row) => (
                   <circle
                     key={`dot-${col}-${row}`}
                     cx={340 + col * 18}
@@ -97,39 +110,45 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
 
               {/* Thin horizontal accent lines — right side */}
               <line x1="360" y1="105" x2="445" y2="105" stroke="#ff9100" strokeWidth="1.5" opacity="0.4" />
-              <line x1="375" y1="115" x2="445" y2="115" stroke="#ff9100" strokeWidth="1" opacity="0.25" />
+              <line x1="375" y1="115" x2="445" y2="115" stroke="#ff9100" strokeWidth="1" strokeDasharray="4 2" opacity="0.3" />
 
-              {/* Circular ring decoration behind the photo */}
-              <circle cx="230" cy="138" r="102" fill="none" stroke="#ff9100" strokeWidth="1.5" opacity="0.25" />
-              <circle cx="230" cy="138" r="115" fill="none" stroke="#ffffff" strokeWidth="0.8" opacity="0.12" />
+              {/* Architectural Concentric Rings behind photo */}
+              <circle cx="230" cy="138" r="102" fill="none" stroke="#ff9100" strokeWidth="1.5" opacity="0.45" />
+              <circle cx="230" cy="138" r="112" fill="none" stroke="#ffffff" strokeWidth="1" strokeDasharray="4 4" opacity="0.25" />
+              <circle cx="230" cy="138" r="122" fill="none" stroke="#ff9100" strokeWidth="0.75" opacity="0.2" />
+
+              {/* Precision architectural compass ticks */}
+              <line x1="230" y1="18" x2="230" y2="28" stroke="#ff9100" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+              <line x1="230" y1="248" x2="230" y2="258" stroke="#ff9100" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+              <line x1="110" y1="138" x2="120" y2="138" stroke="#ff9100" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+              <line x1="340" y1="138" x2="350" y2="138" stroke="#ff9100" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
             </svg>
 
             {/* ── Circular Photo Frame — Centred & Elevated ── */}
             <div className="absolute inset-0 flex items-center justify-center z-10">
-              {/* Outer glow ring */}
+              {/* Outer radial ambient glow */}
               <div
-                className="absolute rounded-full"
+                className="absolute rounded-full pointer-events-none"
                 style={{
-                  width: '216px',
-                  height: '216px',
-                  background: 'radial-gradient(circle, rgba(255,145,0,0.18) 0%, transparent 70%)',
-                  filter: 'blur(6px)',
+                  width: '224px',
+                  height: '224px',
+                  background: 'radial-gradient(circle, rgba(255,145,0,0.28) 0%, rgba(255,145,0,0.08) 50%, transparent 75%)',
+                  filter: 'blur(8px)',
                 }}
               />
 
-              {/* Photo frame with layered borders */}
+              {/* Luxury Photo Frame */}
               <div
                 className="relative rounded-full overflow-hidden"
                 style={{
                   width: '196px',
                   height: '196px',
-                  border: '3px solid #ff9100',
+                  border: '4px solid #ffffff',
                   boxShadow: `
-                    0 0 0 5px #2c231e,
-                    0 0 0 8px rgba(255,145,0,0.35),
-                    0 0 0 11px #2c231e,
-                    0 0 0 14px rgba(255,255,255,0.12),
-                    0 16px 40px rgba(0,0,0,0.55)
+                    0 0 0 3.5px #ff9100,
+                    0 0 0 7px #2e2520,
+                    0 0 0 9.5px rgba(255,145,0,0.45),
+                    0 16px 36px rgba(0,0,0,0.65)
                   `,
                   backgroundColor: '#ffffff',
                   flexShrink: 0,
@@ -148,8 +167,9 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
           </div>
 
 
-          {/* Left Body: Professional Experience */}
-          <section className="p-6 sm:p-7 pt-2 flex-1">
+
+          {/* Left Body: Professional Experience — pt-5 on mobile (no photo above), pt-2 on desktop */}
+          <section className="p-6 sm:p-7 pt-5 md:pt-2 flex-1">
             {/* Section Heading */}
             <h2
               className="text-base sm:text-lg font-black tracking-wide uppercase mb-3"
@@ -276,10 +296,11 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
         </div>
 
         {/* ================= RIGHT COLUMN (43% width on desktop) ================= */}
+        {/* order-1 on mobile so it appears before experiences, order-2 on desktop (right side) */}
         <aside
-          className="md:col-span-5 print:col-span-5 p-6 sm:p-7 flex flex-col justify-between space-y-3.5 relative overflow-hidden"
+          className="md:col-span-5 print:col-span-5 p-6 sm:p-7 flex flex-col justify-between space-y-3.5 relative overflow-hidden order-1 md:order-2 print:order-2 md:border-l border-amber-500/20"
           style={{
-            backgroundColor: '#392d28',
+            backgroundColor: '#2e2520',
             color: '#f0ece8',
           }}
         >
@@ -287,13 +308,58 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
           <div
             className="absolute right-4 sm:right-6 top-0 w-20 sm:w-24 h-56 rounded-b-full pointer-events-none"
             style={{
-              backgroundColor: '#4e3e37',
+              backgroundColor: '#43362f',
               opacity: 0.45,
             }}
           />
 
-          {/* Right Header: Name & Role Title */}
-          <div className="relative z-10 pt-2 pb-4">
+          {/* ── MOBILE-ONLY: Compact Photo + Name Hero ── */}
+          <div className="block md:hidden print:hidden relative z-10 -mx-6 -mt-6 px-5 pt-5 pb-4 border-b border-amber-500/20"
+            style={{ backgroundColor: '#2e2520' }}
+          >
+            <div className="flex items-center gap-4">
+              {/* Compact circular photo */}
+              <div
+                className="relative rounded-full overflow-hidden flex-shrink-0"
+                style={{
+                  width: '84px',
+                  height: '84px',
+                  border: '2.5px solid #ffffff',
+                  boxShadow: '0 0 0 2.5px #ff9100, 0 0 0 5px #2e2520, 0 0 0 7.5px rgba(255,145,0,0.45)',
+                  backgroundColor: '#ffffff',
+                }}
+              >
+                <Image
+                  src={cvData.photoUrl}
+                  alt={cvData.name}
+                  fill
+                  priority
+                  className="object-cover object-top"
+                  sizes="84px"
+                />
+              </div>
+              {/* Name + Role beside photo */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-black tracking-wider uppercase leading-tight"
+                  style={{ color: '#ffffff', letterSpacing: '0.04em' }}>
+                  {cvData.name}
+                </h1>
+                <div className="mt-1 text-[10px] font-black tracking-wide uppercase leading-tight"
+                  style={{ color: '#ff9100' }}>
+                  {cvData.roleTitle}
+                </div>
+                <div className="mt-1.5 text-[10px] font-normal flex flex-wrap gap-x-1.5"
+                  style={{ color: '#cfc7c2' }}>
+                  <span>{cvData.location}</span>
+                  <span>•</span>
+                  <span>{cvData.phone}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Header: Name & Role Title — DESKTOP ONLY */}
+          <div className="relative z-10 pt-2 pb-4 hidden md:block print:block">
             <h1
               className="text-3xl sm:text-[34px] lg:text-[38px] font-black tracking-wider uppercase font-sans leading-none"
               style={{ color: '#ffffff', letterSpacing: '0.04em' }}
