@@ -21,12 +21,13 @@ export function LayoutWrapper({
   const pathname = usePathname()
   const isStudioRoute = pathname?.startsWith('/studio')
   const isAdminRoute = pathname?.startsWith('/admin')
+  const isPrintRoute = pathname === '/cv/print' || pathname?.startsWith('/cv/print')
 
   // Enable scroll restoration
   useScrollRestoration()
 
-  // Don't show header for studio or admin routes
-  if (isStudioRoute || isAdminRoute) {
+  // Don't show header or footer for studio, admin, or print routes
+  if (isStudioRoute || isAdminRoute || isPrintRoute) {
     return <>{children}</>
   }
 

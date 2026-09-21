@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { Printer, ArrowLeft, X, Sparkles } from 'lucide-react'
 import { CVDocument } from '@/components/cv/cv-document'
 import { cvData as defaultCvData, CVData } from '@/data/cv-data'
 
@@ -46,58 +48,40 @@ export default function PrintCVPage() {
 
         * { box-sizing: border-box; }
 
-        /* ─── SCREEN: grey background, CV centred ──────── */
+        /* ─── SCREEN: Deep luxury studio canvas ────────── */
         @media screen {
           html, body {
-            background: #374151;
+            background-color: #0b0f17;
+            background-image: radial-gradient(circle at 50% 10%, rgba(223, 134, 43, 0.08) 0%, transparent 60%);
             margin: 0;
-            padding: 24px;
+            padding: 0 16px 40px 16px;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
           }
-          .cv-print-hint {
-            color: #d1d5db;
-            font-family: system-ui, sans-serif;
-            font-size: 14px;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          .cv-print-hint button {
-            background: #df862b;
-            color: #fff;
-            border: none;
-            padding: 6px 18px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-          }
-          .cv-print-hint button:hover { background: #c97521; }
           .cv-wrapper-screen {
             width: ${CV_NATURAL_WIDTH}px;
-            box-shadow: 0 4px 40px rgba(0,0,0,0.6);
+            max-width: 100%;
+            box-shadow: 0 25px 60px -15px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06);
+            border-radius: 12px;
           }
         }
 
         /* ─── PRINT: scale CV to fit A4 exactly ────────── */
         @media print {
-          .cv-print-hint { display: none !important; }
+          .cv-print-topbar { display: none !important; }
 
           html {
-            /* zoom 820px → 793.7px = A4 width at 96 dpi */
             zoom: ${PRINT_ZOOM};
           }
 
           html, body {
             width: ${CV_NATURAL_WIDTH}px;
-            margin: 0;
-            padding: 0;
+            margin: 0 !important;
+            padding: 0 !important;
             overflow: hidden;
-            background: #ffffff;
+            background: #ffffff !important;
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
             color-adjust: exact;
@@ -105,7 +89,8 @@ export default function PrintCVPage() {
 
           .cv-wrapper-screen {
             width: ${CV_NATURAL_WIDTH}px;
-            box-shadow: none;
+            box-shadow: none !important;
+            border-radius: 0 !important;
           }
 
           /* Force 12-column two-column layout (overrides md: breakpoint) */
@@ -123,22 +108,50 @@ export default function PrintCVPage() {
         }
       `}</style>
 
-      {/* Screen hint bar */}
-      <div className="cv-print-hint">
-        <span>Print dialog will open automatically.</span>
-        <button onClick={() => window.print()}>Print / Save PDF</button>
-        <button
-          onClick={() => window.close()}
-          style={{ background: '#4b5563' }}
-        >
-          Close
-        </button>
-      </div>
+      {/* ── Floating Executive Topbar (Hidden in Print) ── */}
+      <header className="cv-print-topbar w-full max-w-[820px] my-4 px-3 py-2.5 bg-[#141824]/90 backdrop-blur-md rounded-xl border border-white/10 shadow-xl flex items-center justify-between gap-3 text-slate-200">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link
+            href="/cv"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 transition-all"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Back to CV View</span>
+          </Link>
 
-      {/* CV document */}
+          <div className="h-4 w-px bg-white/10" />
+
+          <div className="flex items-center gap-1.5 truncate text-xs text-slate-400">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="font-medium text-slate-300 hidden sm:inline">A4 Document Ready</span>
+            <span className="text-[11px] text-slate-500 hidden md:inline">• Print dialog opens automatically</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-[#df862b] hover:bg-[#c97521] shadow-lg shadow-[#df862b]/25 transition-all cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print / Save PDF</span>
+          </button>
+
+          <button
+            onClick={() => window.close()}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            title="Close preview"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      {/* ── CV Document ── */}
       <div className="cv-wrapper-screen">
         <CVDocument data={data} />
       </div>
     </>
   )
 }
+
