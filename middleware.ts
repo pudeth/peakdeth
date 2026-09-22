@@ -1,22 +1,56 @@
-import type { NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  // Handle Supabase auth
-  const supabaseResponse = await updateSession(request)
+  const { pathname } = request.nextUrl
 
-  // Add performance headers
-  supabaseResponse.headers.set('X-DNS-Prefetch-Control', 'on')
+  // 1. Check admin authentication from session cookies
+  const devSession = request.cookies.get('admin_dev_session')?.value === 'true'
+  const hasSbAuth = request.cookies.getAll().some(
+    (c) => (c.name.startsWith('sb-') || c.name.includes('auth-token') || c.name.includes('supabase')) && Boolean(c.value)
+  )
+  const isAuthenticated = Boolean(devSession || hasSbAuth)
 
-  // Enable early hints for link prefetching
-  const pathname = request.nextUrl.pathname
+  // 2. Handle legacy .html aliases
+  if (pathname === '/admin.html') {
+    const url = request.nextUrl.clone()
+    url.pathname = isAuthenticated ? '/admin/dashboard' : '/admin/login'
+    return NextResponse.redirect(url)
+  }
+
+  if (pathname === '/home.html') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/'
+    return NextResponse.redirect(url)
+  }
+
+  // 3. Protect /admin routes (except /admin/login)
+  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
+    if (!isAuthenticated) {
+      const loginUrl = request.nextUrl.clone()
+      loginUrl.pathname = '/admin/login'
+      return NextResponse.redirect(loginUrl)
+    }
+  }
+
+  // 4. Redirect to dashboard if authenticated user visits /admin/login
+  if (pathname === '/admin/login' && isAuthenticated) {
+    const dashboardUrl = request.nextUrl.clone()
+    dashboardUrl.pathname = '/admin/dashboard'
+    return NextResponse.redirect(dashboardUrl)
+  }
+
+  // 5. Default response with performance headers
+  const response = NextResponse.next()
+  response.headers.set('X-DNS-Prefetch-Control', 'on')
 
   if (pathname === '/') {
-    supabaseResponse.headers.set('Link', '</gallery>; rel=prefetch, </about>; rel=prefetch, </contact>; rel=prefetch')
+    response.headers.set(
+      'Link',
+      '</gallery>; rel=prefetch, </about>; rel=prefetch, </contact>; rel=prefetch'
+    )
   }
-  // Note: Removed /collection prefetch as it's a dynamic route requiring [slug] parameter
 
-  return supabaseResponse
+  return response
 }
 
 export const config = {
