@@ -30,10 +30,12 @@ export function CVView({ initialData }: CVViewProps) {
   // Automatically compute scale so the 820px side-by-side A4 document fits mobile screens perfectly
   useEffect(() => {
     const handleResize = () => {
-      const padding = window.innerWidth < 640 ? 16 : 32
-      const available = window.innerWidth - padding
+      if (typeof window === 'undefined') return
+      const screenWidth = window.innerWidth || document.documentElement.clientWidth || 820
+      const padding = screenWidth < 640 ? 16 : 32
+      const available = Math.max(280, screenWidth - padding)
       if (available < 820) {
-        setAutoScale(Math.min(1, Math.max(0.35, available / 820)))
+        setAutoScale(Math.min(1, Math.max(0.2, available / 820)))
       } else {
         setAutoScale(1)
       }
@@ -248,9 +250,9 @@ export function CVView({ initialData }: CVViewProps) {
 
 
       {/* ── CV Document (Side-by-Side A4 format across Mobile & Desktop) ── */}
-      <main className="cv-main-container w-full max-w-5xl mx-auto flex justify-center overflow-x-auto pb-16 px-1 sm:px-0 print:p-0 print:m-0 print:max-w-none">
+      <main className="cv-main-container w-full max-w-5xl mx-auto flex justify-center overflow-x-auto pb-16 px-2 sm:px-4 print:p-0 print:m-0 print:max-w-none">
         <div
-          className="relative flex justify-center"
+          className="relative shrink-0"
           style={{
             width: `${Math.round(820 * currentZoom)}px`,
             height: `${Math.round(1160 * currentZoom)}px`,
@@ -260,7 +262,7 @@ export function CVView({ initialData }: CVViewProps) {
         >
           {/* Ambient presentation glow backdrop */}
           <div
-            className="absolute -inset-6 rounded-3xl bg-gradient-to-b from-[#df862b]/15 via-amber-600/5 to-transparent blur-2xl pointer-events-none -z-10"
+            className="absolute -inset-4 sm:-inset-6 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#df862b]/15 via-amber-600/5 to-transparent blur-xl sm:blur-2xl pointer-events-none -z-10"
             aria-hidden="true"
           />
 
@@ -268,6 +270,9 @@ export function CVView({ initialData }: CVViewProps) {
             style={{
               width: '820px',
               height: '1160px',
+              position: 'absolute',
+              top: 0,
+              left: 0,
               transform: `scale(${currentZoom})`,
               transformOrigin: 'top left',
               transition: 'transform 0.15s ease-out',
@@ -312,7 +317,7 @@ export function CVView({ initialData }: CVViewProps) {
           {/* The Pristine CV Document in Fullscreen Modal */}
           <div
             onClick={(e) => e.stopPropagation()}
-            className="pb-16 relative flex justify-center"
+            className="pb-16 relative shrink-0"
             style={{
               width: `${Math.round(820 * currentZoom)}px`,
               height: `${Math.round(1160 * currentZoom)}px`,
@@ -321,13 +326,16 @@ export function CVView({ initialData }: CVViewProps) {
             }}
           >
             <div
-              className="absolute -inset-6 rounded-3xl bg-gradient-to-b from-[#df862b]/20 via-amber-600/5 to-transparent blur-2xl pointer-events-none -z-10"
+              className="absolute -inset-4 sm:-inset-6 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#df862b]/20 via-amber-600/5 to-transparent blur-xl sm:blur-2xl pointer-events-none -z-10"
               aria-hidden="true"
             />
             <div
               style={{
                 width: '820px',
                 height: '1160px',
+                position: 'absolute',
+                top: 0,
+                left: 0,
                 transform: `scale(${currentZoom})`,
                 transformOrigin: 'top left',
                 transition: 'transform 0.15s ease-out',

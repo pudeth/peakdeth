@@ -29,7 +29,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
   return (
     <div
       id="cv-printable-document"
-      className="print-sheet mx-auto font-sans relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.08)] print:border-none print:shadow-none print:ring-0 print:rounded-none print:overflow-hidden print:w-full print:max-w-none"
+      className="print-sheet font-sans relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.08)] print:border-none print:shadow-none print:ring-0 print:rounded-none print:overflow-hidden print:w-full print:max-w-none"
       style={{
         width: '820px',
         minWidth: '820px',
