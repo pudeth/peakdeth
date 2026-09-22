@@ -29,19 +29,20 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
   return (
     <div
       id="cv-printable-document"
-      className="print-sheet mx-auto font-sans transition-all duration-300 relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.08)] print:border-none print:shadow-none print:ring-0 print:rounded-none print:overflow-hidden print:w-[210mm] print:max-w-[210mm] print:h-[297mm]"
+      className="print-sheet mx-auto font-sans transition-all duration-300 relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.08)] print:border-none print:shadow-none print:ring-0 print:rounded-none print:overflow-hidden print:w-full print:max-w-none"
       style={{
         width: '100%',
         maxWidth: '820px',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#13161f',
+        backgroundImage: 'linear-gradient(to right, #13161f 0%, #13161f 41.666667%, #ffffff 41.666667%, #ffffff 100%)',
         color: '#1e293b',
       }}
     >
       {/* ================= UNIFIED EXECUTIVE GRID ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 min-h-[1120px] print:min-h-0 print:h-[297mm]">
+      <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 min-h-[1160px] print:h-[1160px]">
         {/* ================= LEFT SIDEBAR (Dark Obsidian Column: 38%) ================= */}
         <aside
-          className="md:col-span-5 print:col-span-5 p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden order-1 text-slate-200"
+          className="md:col-span-5 print:col-span-5 p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden order-1 text-slate-200 h-full min-h-full"
           style={{
             backgroundColor: '#13161f',
             borderRight: '1px solid rgba(223, 134, 43, 0.25)',
@@ -56,14 +57,14 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
             }}
           />
 
-          <div className="relative z-10 space-y-5">
+          <div className="relative z-10 space-y-4">
             {/* ── 1. AVATAR PORTRAIT ── */}
             <div className="flex flex-col items-center text-center pt-1 pb-1">
               <div
                 className="relative rounded-full overflow-hidden flex-shrink-0"
                 style={{
-                  width: '148px',
-                  height: '148px',
+                  width: '136px',
+                  height: '136px',
                   border: '3px solid #df862b',
                   boxShadow: '0 0 0 4px rgba(223,134,43,0.25), 0 12px 28px rgba(0,0,0,0.7)',
                   backgroundColor: '#1f2430',
@@ -75,7 +76,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
                   fill
                   priority
                   className="object-cover object-top"
-                  sizes="148px"
+                  sizes="136px"
                 />
               </div>
 
@@ -237,7 +238,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
           </div>
 
           {/* ── 6. SIDEBAR FOOTER NOTE ── */}
-          <div className="relative z-10 pt-3 mt-4 border-t border-white/10 text-[9.5px] text-slate-400 flex items-center justify-between">
+          <div className="relative z-10 pt-2.5 mt-auto border-t border-white/10 text-[9.5px] text-slate-400 flex items-center justify-between">
             <span>Verified Portfolio</span>
             <span className="text-[#df862b] font-semibold">{cv.website?.label}</span>
           </div>
@@ -245,80 +246,83 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
 
         {/* ================= RIGHT MAIN COLUMN (Executive Crisp White: 62%) ================= */}
         <main
-          className="md:col-span-7 print:col-span-7 p-6 sm:p-8 flex flex-col justify-between order-2 bg-white text-slate-800"
+          className="md:col-span-7 print:col-span-7 p-5 sm:p-6 flex flex-col justify-between order-2 bg-white text-slate-800 h-full min-h-full"
           style={{ minHeight: '100%' }}
         >
-          <div className="space-y-5">
+          <div className="space-y-3.5">
             {/* ── 1. MAIN HEADER (Name, Title, Accent Line) — DESKTOP ONLY ── */}
-            <div className="hidden md:block print:block border-b border-slate-100 pb-4">
+            <div className="hidden md:block print:block border-b border-slate-100 pb-3">
               <div className="flex items-baseline justify-between gap-4">
-                <h1 className="text-3xl sm:text-[36px] font-black tracking-tight text-slate-950 font-sans uppercase leading-none">
+                <h1 className="text-2xl sm:text-[32px] font-black tracking-tight text-slate-950 font-sans uppercase leading-none">
                   {cv.name}
                 </h1>
-                <span className="text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full bg-amber-50 text-[#df862b] border border-amber-200/80">
+                <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full bg-amber-50 text-[#df862b] border border-amber-200/80">
                   CV / Resume
                 </span>
               </div>
 
-              <div className="mt-2 text-xs sm:text-[12.5px] font-bold tracking-wider uppercase text-[#df862b]">
+              <div className="mt-1.5 text-xs sm:text-[12px] font-bold tracking-wider uppercase text-[#df862b]">
                 {cv.roleTitle}
               </div>
 
               {/* Refined gradient accent bar */}
-              <div className="h-1 w-20 bg-gradient-to-r from-[#df862b] via-amber-400 to-amber-200 rounded-full mt-2.5" />
+              <div className="h-1 w-16 bg-gradient-to-r from-[#df862b] via-amber-400 to-amber-200 rounded-full mt-2" />
             </div>
 
             {/* ── 2. PROFESSIONAL SUMMARY ── */}
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-1.5 h-4 bg-[#df862b] rounded-full" />
-                <h2 className="text-xs sm:text-[13px] font-black tracking-wider uppercase text-slate-900">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-1.5 h-3.5 bg-[#df862b] rounded-full" />
+                <h2 className="text-xs sm:text-[12.5px] font-black tracking-wider uppercase text-slate-900">
                   PROFESSIONAL SUMMARY
                 </h2>
               </div>
-              <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-700 text-justify">
+              <p className="text-[10.5px] sm:text-[11px] leading-relaxed text-slate-700 text-justify">
                 {cv.summary}
               </p>
             </div>
 
             {/* ── 3. PROFESSIONAL EXPERIENCE ── */}
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-1.5 h-4 bg-[#df862b] rounded-full" />
-                <h2 className="text-xs sm:text-[13px] font-black tracking-wider uppercase text-slate-900">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1.5 h-3.5 bg-[#df862b] rounded-full" />
+                <h2 className="text-xs sm:text-[12.5px] font-black tracking-wider uppercase text-slate-900">
                   PROFESSIONAL EXPERIENCE
                 </h2>
               </div>
 
-              <div className="space-y-4">
-                {cv.experiences.map((exp, index) => (
-                  <div key={exp.id} className="relative pl-3 border-l-2 border-slate-100 hover:border-amber-400/60 transition-colors">
-                    {/* Circle marker on timeline */}
+              <div className="space-y-2.5">
+                {cv.experiences.map((exp, idx) => (
+                  <div
+                    key={idx}
+                    className="relative pl-3 border-l-2 border-slate-200 hover:border-[#df862b] transition-colors"
+                  >
+                    {/* Glowing timeline node dot */}
                     <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-[#df862b] ring-2 ring-white" />
 
-                    {/* Company & Period line */}
+                    {/* Company & Period */}
                     <div className="flex flex-wrap items-baseline justify-between gap-1 leading-snug">
-                      <span className="text-xs sm:text-[13px] font-black text-slate-900">
+                      <span className="text-xs sm:text-[12px] font-black text-slate-900">
                         {exp.company}
                       </span>
-                      <span className="text-[10px] sm:text-[10.5px] font-semibold text-[#df862b] bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">
+                      <span className="text-[9.5px] sm:text-[10px] font-semibold text-[#df862b] bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">
                         {exp.period}
                       </span>
                     </div>
 
                     {/* Role | Location */}
-                    <div className="text-[11px] font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+                    <div className="text-[10.5px] font-semibold text-slate-600 mb-0.5 flex items-center gap-1.5">
                       <span className="text-slate-800">{exp.role}</span>
                       <span className="text-slate-300">•</span>
                       <span className="text-slate-500 font-normal">{exp.location}</span>
                     </div>
 
                     {/* Bullets */}
-                    <ul className="space-y-1 list-none pl-0 mb-2">
+                    <ul className="space-y-0.5 list-none pl-0 mb-1">
                       {exp.bullets.map((bullet, bIdx) => (
                         <li
                           key={bIdx}
-                          className="flex items-start gap-1.5 text-[10.5px] sm:text-[11px] leading-relaxed text-slate-700"
+                          className="flex items-start gap-1.5 text-[10px] sm:text-[10.5px] leading-relaxed text-slate-700"
                         >
                           <span className="shrink-0 font-bold text-[#df862b] select-none">•</span>
                           <span>{bullet}</span>
@@ -328,12 +332,12 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
 
                     {/* Technologies Tag Pills */}
                     {exp.technologies && exp.technologies.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                        <span className="text-[9.5px] font-bold text-slate-400 mr-0.5">Stack:</span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="text-[9px] font-bold text-slate-400 mr-0.5">Stack:</span>
                         {exp.technologies.map((tech, tIdx) => (
                           <span
                             key={tIdx}
-                            className="inline-block px-1.5 py-0.2 rounded text-[9.5px] font-medium bg-slate-50 border border-slate-200/80 text-slate-700"
+                            className="inline-block px-1.5 py-0.2 rounded text-[9px] font-medium bg-slate-50 border border-slate-200/80 text-slate-700"
                           >
                             {tech}
                           </span>
@@ -348,28 +352,28 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
             {/* ── 4. HONORS & AWARDS ── */}
             {cv.awards && cv.awards.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-2.5">
-                  <div className="w-1.5 h-4 bg-[#df862b] rounded-full" />
-                  <h2 className="text-xs sm:text-[13px] font-black tracking-wider uppercase text-slate-900">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-1.5 h-3.5 bg-[#df862b] rounded-full" />
+                  <h2 className="text-xs sm:text-[12.5px] font-black tracking-wider uppercase text-slate-900">
                     HONORS & AWARDS
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="space-y-1.5">
                   {cv.awards.map((award, aIdx) => (
                     <div
                       key={aIdx}
-                      className="p-2 rounded-lg bg-slate-50 border border-slate-100 flex items-start justify-between gap-2"
+                      className="p-1.5 px-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between gap-2"
                     >
-                      <div>
-                        <div className="font-bold text-[11px] text-slate-900 leading-tight">
+                      <div className="flex items-baseline gap-1.5 min-w-0 pr-2">
+                        <span className="font-bold text-[10.5px] text-slate-900 truncate">
                           {award.title}
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
-                          {award.organization}
-                        </div>
+                        </span>
+                        <span className="text-[9.5px] text-slate-500 truncate">
+                          • {award.organization}
+                        </span>
                       </div>
-                      <span className="text-[9.5px] font-bold text-[#df862b] shrink-0 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
+                      <span className="text-[9px] font-bold text-[#df862b] shrink-0 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">
                         {award.year}
                       </span>
                     </div>
@@ -380,7 +384,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
           </div>
 
           {/* ── 5. REFERENCES / VERIFICATION FOOTER ── */}
-          <div className="pt-3 mt-4 border-t border-slate-100">
+          <div className="pt-2.5 mt-auto border-t border-slate-100">
             <div className="flex items-center justify-between text-[10px] text-slate-500">
               <span className="italic">
                 References & architecture proofs available upon request.

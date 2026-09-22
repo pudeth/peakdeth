@@ -78,6 +78,7 @@ export default function PrintCVPage() {
 
           html, body {
             width: ${CV_NATURAL_WIDTH}px;
+            height: 1160px;
             margin: 0 !important;
             padding: 0 !important;
             overflow: hidden;
@@ -88,15 +89,27 @@ export default function PrintCVPage() {
           }
 
           .cv-wrapper-screen {
-            width: ${CV_NATURAL_WIDTH}px;
+            width: ${CV_NATURAL_WIDTH}px !important;
+            height: 1160px !important;
             box-shadow: none !important;
             border-radius: 0 !important;
+          }
+
+          #cv-printable-document {
+            width: ${CV_NATURAL_WIDTH}px !important;
+            max-width: ${CV_NATURAL_WIDTH}px !important;
+            height: 1160px !important;
+            min-height: 1160px !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
           }
 
           /* Force 12-column two-column layout (overrides md: breakpoint) */
           #cv-printable-document .grid {
             display: grid !important;
             grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+            height: 1160px !important;
+            min-height: 1160px !important;
           }
 
           /* Preserve all colours & backgrounds */
