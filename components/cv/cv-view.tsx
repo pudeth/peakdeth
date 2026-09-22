@@ -159,9 +159,6 @@ export function CVView({ initialData }: CVViewProps) {
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse hidden md:inline-block flex-shrink-0" />
               <h1 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 truncate">
                 <span className="truncate">{data.name}</span>
-                <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-[#df862b]/20 text-[#df862b] border border-[#df862b]/30 flex-shrink-0 hidden sm:inline">
-                  Popup View
-                </span>
               </h1>
             </div>
           </div>
@@ -256,44 +253,39 @@ export function CVView({ initialData }: CVViewProps) {
       {/* ── Focused Fullscreen CV Popup Modal (CV + Print Only) ── */}
       {isFullscreenModalOpen && (
         <div
-          className="fixed inset-0 z-50 bg-[#070a10]/95 backdrop-blur-xl overflow-y-auto flex flex-col items-center py-4 sm:py-6 px-2 sm:px-4 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeFullscreenModal()
+          }}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md overflow-y-auto overscroll-contain flex flex-col items-center py-4 sm:py-6 px-2 sm:px-4 animate-in fade-in duration-200"
           role="dialog"
           aria-modal="true"
         >
           {/* Floating Controls Bar: ONLY Print and Close */}
-          <div className="sticky top-2 sm:top-4 z-50 w-full max-w-[820px] flex items-center justify-between mb-4 sm:mb-6 px-2 sm:px-0">
-            {/* Minimalist document indicator */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141824]/90 border border-white/10 backdrop-blur-md shadow-xl text-xs text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-semibold text-white">{data.name}</span>
-              <span className="text-slate-500">•</span>
-              <span className="text-[#df862b] font-medium">CV Preview</span>
-            </div>
+          <div className="sticky top-2 sm:top-4 z-50 w-full max-w-[820px] flex items-center justify-end gap-2 mb-3 sm:mb-4 px-1 sm:px-0">
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold bg-[#df862b] hover:bg-[#c97521] text-white shadow-xl shadow-[#df862b]/30 transition-all hover:scale-105 cursor-pointer border border-amber-400/20"
+              title="Print or Save as A4 PDF"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Print / Save PDF</span>
+            </button>
 
-            {/* Actions: ONLY Print button + Close button */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handlePrint}
-                className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold bg-[#df862b] hover:bg-[#c97521] text-white shadow-xl shadow-[#df862b]/30 transition-all hover:scale-105 cursor-pointer"
-                title="Print or Save as A4 PDF"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Print / Save PDF</span>
-              </button>
-
-              <button
-                onClick={closeFullscreenModal}
-                className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 shadow-xl transition-all cursor-pointer text-xs font-semibold"
-                title="Close Fullscreen (Esc)"
-              >
-                <X className="w-4 h-4" />
-                <span className="hidden sm:inline">Close</span>
-              </button>
-            </div>
+            <button
+              onClick={closeFullscreenModal}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 shadow-xl backdrop-blur-md transition-all cursor-pointer text-xs font-semibold"
+              title="Close (Esc)"
+            >
+              <X className="w-4 h-4" />
+              <span>Close</span>
+            </button>
           </div>
 
           {/* The Pristine CV Document */}
-          <div className="w-full max-w-[820px] pb-12 relative">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[820px] pb-16 relative"
+          >
             <div
               className="hidden sm:block absolute -inset-6 rounded-3xl bg-gradient-to-b from-[#df862b]/20 via-amber-600/5 to-transparent blur-2xl pointer-events-none -z-10"
               aria-hidden="true"
