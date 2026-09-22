@@ -11,7 +11,6 @@ import {
   Share2,
   Check,
   Maximize2,
-  Minimize2,
   X,
 } from 'lucide-react'
 import { CVDocument } from './cv-document'
@@ -25,7 +24,7 @@ export function CVView({ initialData }: CVViewProps) {
   const [data, setData] = useState<CVData>(initialData || defaultCvData)
   const [scale, setScale] = useState<number>(100)
   const [copied, setCopied] = useState<boolean>(false)
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false)
+  const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState<boolean>(false)
 
   // Fetch latest dynamic data on client mount and when window regains focus
   useEffect(() => {
@@ -64,31 +63,36 @@ export function CVView({ initialData }: CVViewProps) {
     window.open('/cv/print', '_blank')
   }
 
-  const toggleFullscreen = async () => {
-    try {
-      if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen()
-        setIsFullscreen(true)
-      } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen()
-          setIsFullscreen(false)
-        }
-      }
-    } catch (err) {
-      console.error('Fullscreen toggle failed:', err)
-    }
+  const openFullscreenModal = () => {
+    setIsFullscreenModalOpen(true)
   }
 
+  const closeFullscreenModal = () => {
+    setIsFullscreenModalOpen(false)
+  }
+
+  // Keyboard shortcut: Esc to close modal
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement))
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreenModalOpen) {
+        setIsFullscreenModalOpen(false)
+      }
     }
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isFullscreenModalOpen])
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isFullscreenModalOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.body.style.overflow = ''
     }
-  }, [])
+  }, [isFullscreenModalOpen])
 
   // Reset scale to 100% before printing, restore after
   useEffect(() => {
@@ -130,15 +134,11 @@ export function CVView({ initialData }: CVViewProps) {
 
   return (
     <div
-      className={`cv-print-root min-h-screen bg-[#090d13] text-slate-100 ${
-        isFullscreen ? 'pt-2 sm:pt-4' : 'pt-3 sm:pt-6'
-      } pb-20 px-0 sm:px-4 print:p-0 print:bg-white print:text-black transition-all duration-300`}
+      className="cv-print-root min-h-screen bg-[#090d13] text-slate-100 pt-3 sm:pt-6 pb-20 px-0 sm:px-4 print:p-0 print:bg-white print:text-black transition-all duration-300"
     >
       {/* ── Sticky Toolbar (hidden when printing) ── */}
       <div
-        className={`no-print max-w-5xl mx-auto mb-4 sm:mb-6 ${
-          isFullscreen ? 'sticky top-1 sm:top-2 z-30' : 'sticky top-2 sm:top-4 z-30'
-        } px-3 sm:px-0 transition-all duration-300`}
+        className="no-print max-w-5xl mx-auto mb-4 sm:mb-6 sticky top-2 sm:top-4 z-30 px-3 sm:px-0 transition-all duration-300"
       >
         <div className="flex items-center justify-between gap-2 p-2 sm:p-2.5 bg-[#141820]/95 backdrop-blur-md rounded-xl border border-slate-800/80 shadow-2xl">
 
@@ -182,29 +182,20 @@ export function CVView({ initialData }: CVViewProps) {
               </button>
             </div>
 
-            {/* Fullscreen Button */}
+            {/* Fullscreen Button — opens focused popup with CV and Print only */}
             <button
-              onClick={toggleFullscreen}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-semibold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 transition-all border border-slate-800 hover:border-slate-700 shadow-sm"
-              title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Fullscreen View'}
+              onClick={openFullscreenModal}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-semibold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 transition-all border border-slate-800 hover:border-slate-700 shadow-sm cursor-pointer"
+              title="Open Fullscreen CV View"
             >
-              {isFullscreen ? (
-                <>
-                  <Minimize2 className="w-3.5 h-3.5 text-[#df862b]" />
-                  <span className="hidden md:inline">Exit Fullscreen</span>
-                </>
-              ) : (
-                <>
-                  <Maximize2 className="w-3.5 h-3.5 text-[#df862b]" />
-                  <span className="hidden md:inline">Fullscreen</span>
-                </>
-              )}
+              <Maximize2 className="w-3.5 h-3.5 text-[#df862b]" />
+              <span className="hidden md:inline">Fullscreen</span>
             </button>
 
             {/* Print button */}
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-bold bg-[#df862b] hover:bg-[#c97521] text-white shadow-lg shadow-[#df862b]/20 transition-all hover:scale-[1.02]"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-bold bg-[#df862b] hover:bg-[#c97521] text-white shadow-lg shadow-[#df862b]/20 transition-all hover:scale-[1.02] cursor-pointer"
               title="Print or Save as A4 PDF"
             >
               <Printer className="w-3.5 h-3.5" />
@@ -261,6 +252,56 @@ export function CVView({ initialData }: CVViewProps) {
           </div>
         </div>
       </main>
+
+      {/* ── Focused Fullscreen CV Popup Modal (CV + Print Only) ── */}
+      {isFullscreenModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-[#070a10]/95 backdrop-blur-xl overflow-y-auto flex flex-col items-center py-4 sm:py-6 px-2 sm:px-4 animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* Floating Controls Bar: ONLY Print and Close */}
+          <div className="sticky top-2 sm:top-4 z-50 w-full max-w-[820px] flex items-center justify-between mb-4 sm:mb-6 px-2 sm:px-0">
+            {/* Minimalist document indicator */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141824]/90 border border-white/10 backdrop-blur-md shadow-xl text-xs text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-semibold text-white">{data.name}</span>
+              <span className="text-slate-500">•</span>
+              <span className="text-[#df862b] font-medium">CV Preview</span>
+            </div>
+
+            {/* Actions: ONLY Print button + Close button */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrint}
+                className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold bg-[#df862b] hover:bg-[#c97521] text-white shadow-xl shadow-[#df862b]/30 transition-all hover:scale-105 cursor-pointer"
+                title="Print or Save as A4 PDF"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print / Save PDF</span>
+              </button>
+
+              <button
+                onClick={closeFullscreenModal}
+                className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 shadow-xl transition-all cursor-pointer text-xs font-semibold"
+                title="Close Fullscreen (Esc)"
+              >
+                <X className="w-4 h-4" />
+                <span className="hidden sm:inline">Close</span>
+              </button>
+            </div>
+          </div>
+
+          {/* The Pristine CV Document */}
+          <div className="w-full max-w-[820px] pb-12 relative">
+            <div
+              className="hidden sm:block absolute -inset-6 rounded-3xl bg-gradient-to-b from-[#df862b]/20 via-amber-600/5 to-transparent blur-2xl pointer-events-none -z-10"
+              aria-hidden="true"
+            />
+            <CVDocument data={data} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
