@@ -24,20 +24,36 @@ export function CVView({ initialData }: CVViewProps) {
   const [data, setData] = useState<CVData>(initialData || defaultCvData)
   const [scale, setScale] = useState<number>(100)
   const [autoScale, setAutoScale] = useState<number>(1)
+  const [fullscreenZoom, setFullscreenZoom] = useState<number>(1)
   const [copied, setCopied] = useState<boolean>(false)
   const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState<boolean>(false)
 
-  // Automatically compute scale so the 820px side-by-side A4 document fits mobile screens perfectly
+  // Automatically compute scales so the 820px side-by-side A4 document fits mobile screens and fullscreen perfectly
   useEffect(() => {
     const handleResize = () => {
       if (typeof window === 'undefined') return
       const screenWidth = window.innerWidth || document.documentElement.clientWidth || 820
+      const screenHeight = window.innerHeight || document.documentElement.clientHeight || 1160
+
+      // Inline view scale (standard reading with margins)
       const padding = screenWidth < 640 ? 16 : 32
       const available = Math.max(280, screenWidth - padding)
       if (available < 820) {
         setAutoScale(Math.min(1, Math.max(0.2, available / 820)))
       } else {
         setAutoScale(1)
+      }
+
+      // Fullscreen view scale: maximize screen area (edge-to-edge on mobile, viewport-fitted on desktop)
+      if (screenWidth < 640) {
+        const availableMobile = Math.max(300, screenWidth - 8)
+        setFullscreenZoom(Math.min(1.2, availableMobile / 820))
+      } else {
+        const availableW = screenWidth - 48
+        const availableH = screenHeight - 110
+        const scaleW = availableW / 820
+        const scaleH = availableH / 1160
+        setFullscreenZoom(Math.min(1.05, Math.min(scaleW, scaleH)))
       }
     }
     handleResize()
@@ -283,50 +299,51 @@ export function CVView({ initialData }: CVViewProps) {
         </div>
       </main>
 
-      {/* ── Focused Fullscreen CV Popup Modal (CV + Print Only) ── */}
+      {/* ── Focused Fullscreen CV Popup Modal (Edge-to-Edge A4 + Studio Close Button) ── */}
       {isFullscreenModalOpen && (
         <div
           onClick={(e) => {
             if (e.target === e.currentTarget) closeFullscreenModal()
           }}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md overflow-y-auto overscroll-contain flex flex-col items-center py-4 sm:py-6 px-2 sm:px-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-2xl overflow-y-auto overscroll-contain flex flex-col items-center py-2 sm:py-5 px-1 sm:px-4 animate-in fade-in duration-200"
           role="dialog"
           aria-modal="true"
         >
-          {/* Floating Controls Bar: ONLY Print and Close */}
-          <div className="sticky top-2 sm:top-4 z-50 w-full max-w-[820px] flex items-center justify-end gap-2 mb-3 sm:mb-4 px-1 sm:px-0">
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold bg-[#df862b] hover:bg-[#c97521] text-white shadow-xl shadow-[#df862b]/30 transition-all hover:scale-105 cursor-pointer border border-amber-400/20"
-              title="Print or Save as A4 PDF"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print / Save PDF</span>
-            </button>
+          {/* Floating Controls Bar: Chic Indicator + Premium Studio Close Button */}
+          <div className="sticky top-2 sm:top-4 z-50 w-full max-w-[840px] flex items-center justify-between gap-3 mb-2.5 sm:mb-4 px-2 sm:px-2 pointer-events-none">
+            {/* Left: Subtle A4 Fullscreen indicator badge */}
+            <div className="pointer-events-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/85 hover:bg-slate-900 text-slate-300 border border-white/10 backdrop-blur-xl shadow-xl transition-all">
+              <span className="w-2 h-2 rounded-full bg-[#df862b] animate-pulse" />
+              <span className="text-[11px] font-mono tracking-wider text-slate-200 uppercase font-semibold">A4 Fullscreen View</span>
+            </div>
 
+            {/* Right: Studio Glass Close Button */}
             <button
               onClick={closeFullscreenModal}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 shadow-xl backdrop-blur-md transition-all cursor-pointer text-xs font-semibold"
-              title="Close (Esc)"
+              className="pointer-events-auto group inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-slate-900/90 hover:bg-rose-950/80 active:scale-95 text-slate-200 hover:text-white border border-white/15 hover:border-rose-500/40 backdrop-blur-2xl shadow-2xl shadow-black/80 transition-all duration-200 cursor-pointer"
+              title="Close Fullscreen (Esc)"
+              aria-label="Close Fullscreen"
             >
-              <X className="w-4 h-4" />
-              <span>Close</span>
+              <span className="text-xs font-semibold tracking-wide group-hover:text-rose-200 transition-colors">Close</span>
+              <div className="w-5 h-5 rounded-full bg-white/10 group-hover:bg-rose-500/30 flex items-center justify-center transition-colors">
+                <X className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+              </div>
             </button>
           </div>
 
-          {/* The Pristine CV Document in Fullscreen Modal */}
+          {/* The Pristine Fullscreen CV Document */}
           <div
             onClick={(e) => e.stopPropagation()}
-            className="pb-16 relative shrink-0"
+            className="pb-16 relative shrink-0 transition-all duration-200"
             style={{
-              width: `${Math.round(820 * currentZoom)}px`,
-              height: `${Math.round(1160 * currentZoom)}px`,
-              minWidth: `${Math.round(820 * currentZoom)}px`,
-              minHeight: `${Math.round(1160 * currentZoom)}px`,
+              width: `${Math.round(820 * fullscreenZoom)}px`,
+              height: `${Math.round(1160 * fullscreenZoom)}px`,
+              minWidth: `${Math.round(820 * fullscreenZoom)}px`,
+              minHeight: `${Math.round(1160 * fullscreenZoom)}px`,
             }}
           >
             <div
-              className="absolute -inset-4 sm:-inset-6 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#df862b]/20 via-amber-600/5 to-transparent blur-xl sm:blur-2xl pointer-events-none -z-10"
+              className="absolute -inset-3 sm:-inset-6 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#df862b]/25 via-amber-600/10 to-transparent blur-xl sm:blur-3xl pointer-events-none -z-10"
               aria-hidden="true"
             />
             <div
@@ -336,7 +353,7 @@ export function CVView({ initialData }: CVViewProps) {
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                transform: `scale(${currentZoom})`,
+                transform: `scale(${fullscreenZoom})`,
                 transformOrigin: 'top left',
                 transition: 'transform 0.15s ease-out',
               }}
