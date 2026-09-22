@@ -134,27 +134,40 @@ export function CVView({ initialData }: CVViewProps) {
 
   return (
     <div
-      className="cv-print-root min-h-screen bg-[#090d13] text-slate-100 pt-20 sm:pt-24 md:pt-28 pb-24 px-2 sm:px-4 print:p-0 print:bg-white print:text-black transition-all duration-300"
+      className="cv-print-root min-h-screen bg-[#090d13] text-slate-100 pt-3 sm:pt-6 pb-20 px-2 sm:px-4 print:p-0 print:bg-white print:text-black transition-all duration-300"
     >
-      {/* ── Sticky Control Bar below Site Header (hidden when printing) ── */}
+      {/* ── Sticky Toolbar (hidden when printing) ── */}
       <div
-        className="no-print max-w-5xl mx-auto mb-4 sm:mb-6 sticky top-16 sm:top-20 z-30 px-1 sm:px-0 transition-all duration-300"
+        className="no-print max-w-5xl mx-auto mb-4 sm:mb-6 sticky top-2 sm:top-4 z-30 px-2 sm:px-0 transition-all duration-300"
       >
         <div className="flex items-center justify-between gap-2 p-2 sm:p-2.5 bg-[#141820]/95 backdrop-blur-md rounded-xl border border-slate-800/80 shadow-2xl">
 
-          {/* Left: Candidate Name & CV Badge */}
-          <div className="flex items-center gap-2 min-w-0 pl-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <h1 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2 truncate">
-              <span className="truncate">{data.name}</span>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#df862b]/20 text-[#df862b] border border-[#df862b]/30 shrink-0">
-                CV / Resume
-              </span>
-            </h1>
+          {/* Left: Back / Exit + Candidate Title */}
+          <div className="flex items-center gap-2 min-w-0">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 transition-colors flex-shrink-0 shadow-sm"
+              title="Return to Website"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Back to Site</span>
+            </Link>
+
+            <div className="h-4 w-px bg-slate-800 flex-shrink-0" />
+
+            <div className="min-w-0 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse hidden md:inline-block flex-shrink-0" />
+              <h1 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 truncate">
+                <span className="truncate">{data.name}</span>
+                <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-[#df862b]/20 text-[#df862b] border border-[#df862b]/30 flex-shrink-0 hidden sm:inline">
+                  Popup View
+                </span>
+              </h1>
+            </div>
           </div>
 
-          {/* Right: Actions (Zoom, Fullscreen, Print, Share) */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          {/* Right: Actions (Zoom, Fullscreen, Print, Share, Close) */}
+          <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
             {/* Zoom Controls — hidden on mobile */}
             <div className="hidden sm:flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800 text-xs text-slate-400">
               <button onClick={zoomOut} title="Zoom Out" className="p-1 hover:text-white transition-colors">
@@ -169,14 +182,14 @@ export function CVView({ initialData }: CVViewProps) {
               </button>
             </div>
 
-            {/* Fullscreen Button — opens focused popup with CV and Print only (desktop only) */}
+            {/* Fullscreen Button — opens focused popup with CV and Print only */}
             <button
               onClick={openFullscreenModal}
-              className="hidden md:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-semibold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 transition-all border border-slate-800 hover:border-slate-700 shadow-sm cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-semibold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 transition-all border border-slate-800 hover:border-slate-700 shadow-sm cursor-pointer"
               title="Open Fullscreen CV View"
             >
               <Maximize2 className="w-3.5 h-3.5 text-[#df862b]" />
-              <span>Fullscreen</span>
+              <span className="hidden md:inline">Fullscreen</span>
             </button>
 
             {/* Print button */}
@@ -201,6 +214,15 @@ export function CVView({ initialData }: CVViewProps) {
                 <Share2 className="w-3.5 h-3.5" />
               )}
             </button>
+
+            {/* Close / Return to site X button */}
+            <Link
+              href="/"
+              className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors border border-slate-800"
+              title="Close View"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Link>
           </div>
         </div>
       </div>

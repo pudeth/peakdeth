@@ -34,6 +34,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
         width: '100%',
         maxWidth: '820px',
         backgroundColor: '#13161f',
+        backgroundImage: 'linear-gradient(to right, #13161f 0%, #13161f 41.666667%, #ffffff 41.666667%, #ffffff 100%)',
         color: '#1e293b',
       }}
     >
