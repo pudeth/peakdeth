@@ -87,7 +87,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
             <div>
               <div className="flex items-center gap-2 pb-1.5 mb-2.5 border-b border-white/10">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#df862b]" />
-                <h2 className="text-xs font-black tracking-widest uppercase text-white">
+                <h2 className="text-[11.5px] font-black tracking-wider uppercase text-white">
                   CONTACT
                 </h2>
               </div>
@@ -107,7 +107,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
                     <div className="w-5 h-5 rounded-md bg-[#df862b]/15 flex items-center justify-center text-[#df862b] shrink-0">
                       <Mail className="w-3 h-3" />
                     </div>
-                    <span className="font-medium text-slate-200 truncate">{cv.email}</span>
+                    <span className="font-medium text-slate-200">{cv.email}</span>
                   </div>
                 )}
 
@@ -129,7 +129,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
                       href={cv.website.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-semibold text-[#df862b] hover:underline inline-flex items-center gap-1 truncate"
+                      className="font-semibold text-[#df862b] hover:underline inline-flex items-center gap-1"
                     >
                       <span>{cv.website.label}</span>
                       <ExternalLink className="w-2.5 h-2.5 opacity-70" />
@@ -144,14 +144,14 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
               <div>
                 <div className="flex items-center gap-2 pb-1.5 mb-2.5 border-b border-white/10">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#df862b]" />
-                  <h2 className="text-xs font-black tracking-widest uppercase text-white">
+                  <h2 className="text-[11.5px] font-black tracking-wider uppercase text-white">
                     CORE COMPETENCIES
                   </h2>
                 </div>
 
-                <ul className="space-y-1 text-[10.5px]">
+                <ul className="space-y-1.5 text-[11px]">
                   {cv.coreCompetencies.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2 leading-tight text-slate-300">
+                    <li key={idx} className="flex items-start gap-2 leading-snug text-slate-200">
                       <span className="text-[#df862b] font-black text-xs leading-none shrink-0">•</span>
                       <span>{item}</span>
                     </li>
@@ -165,15 +165,15 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
               <div>
                 <div className="flex items-center gap-2 pb-1.5 mb-2.5 border-b border-white/10">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#df862b]" />
-                  <h2 className="text-xs font-black tracking-widest uppercase text-white">
+                  <h2 className="text-[11.5px] font-black tracking-wider uppercase text-white">
                     TECHNICAL EXPERTISE
                   </h2>
                 </div>
 
-                <div className="space-y-2.5 text-[10px]">
+                <div className="space-y-2.5 text-[10.5px]">
                   {cv.technicalExpertise.map((cat, idx) => (
                     <div key={idx}>
-                      <div className="font-bold text-[10.5px] text-white flex items-center gap-1.5 mb-1">
+                      <div className="font-bold text-[11px] text-white flex items-center gap-1.5 mb-1.5">
                         <span className="w-1 h-2.5 bg-[#df862b] rounded-sm shrink-0" />
                         <span>{cat.category}</span>
                       </div>
@@ -181,7 +181,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
                         {cat.skills.map((skill, sIdx) => (
                           <span
                             key={sIdx}
-                            className="inline-block px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-white/5 border border-white/10 text-slate-200"
+                            className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-white/10 border border-white/10 text-slate-100"
                           >
                             {skill}
                           </span>
@@ -193,27 +193,27 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
               </div>
             )}
 
-            {/* ── 5. EDUCATION (Clean Executive Layout, No White Box!) ── */}
+            {/* ── 5. EDUCATION (Clean Executive Layout) ── */}
             {cv.education && cv.education.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 pb-1.5 mb-2.5 border-b border-white/10">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#df862b]" />
-                  <h2 className="text-xs font-black tracking-widest uppercase text-white">
+                  <h2 className="text-[11.5px] font-black tracking-wider uppercase text-white">
                     EDUCATION
                   </h2>
                 </div>
 
-                <div className="space-y-2 text-[10.5px]">
+                <div className="space-y-2 text-[11px]">
                   {cv.education.map((edu, idx) => (
                     <div key={idx} className="bg-white/5 rounded-lg p-2.5 border border-white/5">
-                      <div className="font-bold text-white text-[11px] leading-tight">
+                      <div className="font-bold text-white text-[11.5px] leading-tight">
                         {edu.institution}
                       </div>
-                      <div className="text-slate-300 font-medium text-[10px] mt-0.5">
+                      <div className="text-slate-300 font-medium text-[10.5px] mt-0.5">
                         {edu.degree}
                       </div>
                       {(edu.location || edu.year) && (
-                        <div className="text-slate-400 text-[9.5px] mt-1 flex items-center justify-between">
+                        <div className="text-slate-400 text-[10px] mt-1 flex items-center justify-between">
                           {edu.location && <span>{edu.location}</span>}
                           {edu.year && (
                             <span className="px-1.5 py-0.2 rounded bg-[#df862b]/20 text-[#df862b] font-semibold">
@@ -230,7 +230,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
           </div>
 
           {/* ── 6. SIDEBAR FOOTER NOTE ── */}
-          <div className="relative z-10 pt-2.5 mt-auto border-t border-white/10 text-[9.5px] text-slate-400 flex items-center justify-between">
+          <div className="relative z-10 pt-2.5 mt-auto border-t border-white/10 text-[10px] text-slate-400 flex items-center justify-between">
             <span>Verified Portfolio</span>
             <span className="text-[#df862b] font-semibold">{cv.website?.label}</span>
           </div>
@@ -244,31 +244,31 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
             {/* ── 1. MAIN HEADER (Name, Title, Accent Line) ── */}
             <div className="border-b border-slate-100 pb-3">
               <div className="flex items-baseline justify-between gap-4">
-                <h1 className="text-2xl sm:text-[32px] font-black tracking-tight text-slate-950 font-sans uppercase leading-none">
+                <h1 className="text-[28px] font-black tracking-tight text-slate-950 font-sans uppercase leading-none">
                   {cv.name}
                 </h1>
-                <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full bg-amber-50 text-[#df862b] border border-amber-200/80">
+                <span className="text-[9.5px] font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full bg-amber-50 text-[#df862b] border border-amber-200/80">
                   CV / Resume
                 </span>
               </div>
 
-              <div className="mt-1.5 text-xs sm:text-[12px] font-bold tracking-wider uppercase text-[#df862b]">
+              <div className="mt-1.5 text-[11.5px] font-bold tracking-wider uppercase text-[#df862b]">
                 {cv.roleTitle}
               </div>
 
               {/* Refined gradient accent bar */}
-              <div className="h-1 w-16 bg-gradient-to-r from-[#df862b] via-amber-400 to-amber-200 rounded-full mt-2" />
+              <div className="h-1 w-14 bg-gradient-to-r from-[#df862b] via-amber-400 to-amber-200 rounded-full mt-2" />
             </div>
 
             {/* ── 2. PROFESSIONAL SUMMARY ── */}
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-1.5 h-3.5 bg-[#df862b] rounded-full" />
-                <h2 className="text-xs sm:text-[12.5px] font-black tracking-wider uppercase text-slate-900">
+                <h2 className="text-[12px] font-black tracking-wider uppercase text-slate-900">
                   PROFESSIONAL SUMMARY
                 </h2>
               </div>
-              <p className="text-[10.5px] sm:text-[11px] leading-relaxed text-slate-700 text-justify">
+              <p className="text-[11.5px] leading-[1.65] text-slate-700 text-justify">
                 {cv.summary}
               </p>
             </div>
@@ -277,43 +277,43 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-1.5 h-3.5 bg-[#df862b] rounded-full" />
-                <h2 className="text-xs sm:text-[12.5px] font-black tracking-wider uppercase text-slate-900">
+                <h2 className="text-[12px] font-black tracking-wider uppercase text-slate-900">
                   PROFESSIONAL EXPERIENCE
                 </h2>
               </div>
 
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {cv.experiences.map((exp, idx) => (
                   <div
                     key={idx}
-                    className="relative pl-3 border-l-2 border-slate-200 hover:border-[#df862b] transition-colors"
+                    className="relative pl-3.5 border-l-2 border-slate-200 hover:border-[#df862b] transition-colors"
                   >
                     {/* Glowing timeline node dot */}
                     <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-[#df862b] ring-2 ring-white" />
 
                     {/* Company & Period */}
                     <div className="flex flex-wrap items-baseline justify-between gap-1 leading-snug">
-                      <span className="text-xs sm:text-[12px] font-black text-slate-900">
+                      <span className="text-[12.5px] font-black text-slate-950">
                         {exp.company}
                       </span>
-                      <span className="text-[9.5px] sm:text-[10px] font-semibold text-[#df862b] bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">
+                      <span className="text-[10px] font-bold text-[#df862b] bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">
                         {exp.period}
                       </span>
                     </div>
 
                     {/* Role | Location */}
-                    <div className="text-[10.5px] font-semibold text-slate-600 mb-0.5 flex items-center gap-1.5">
-                      <span className="text-slate-800">{exp.role}</span>
+                    <div className="text-[11px] font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                      <span className="text-slate-900">{exp.role}</span>
                       <span className="text-slate-300">•</span>
                       <span className="text-slate-500 font-normal">{exp.location}</span>
                     </div>
 
                     {/* Bullets */}
-                    <ul className="space-y-0.5 list-none pl-0 mb-1">
+                    <ul className="space-y-1 list-none pl-0 mb-1.5">
                       {exp.bullets.map((bullet, bIdx) => (
                         <li
                           key={bIdx}
-                          className="flex items-start gap-1.5 text-[10px] sm:text-[10.5px] leading-relaxed text-slate-700"
+                          className="flex items-start gap-1.5 text-[11px] leading-[1.55] text-slate-700"
                         >
                           <span className="shrink-0 font-bold text-[#df862b] select-none">•</span>
                           <span>{bullet}</span>
@@ -324,11 +324,11 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
                     {/* Technologies Tag Pills */}
                     {exp.technologies && exp.technologies.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1">
-                        <span className="text-[9px] font-bold text-slate-400 mr-0.5">Stack:</span>
+                        <span className="text-[9.5px] font-bold text-slate-400 mr-0.5">Stack:</span>
                         {exp.technologies.map((tech, tIdx) => (
                           <span
                             key={tIdx}
-                            className="inline-block px-1.5 py-0.2 rounded text-[9px] font-medium bg-slate-50 border border-slate-200/80 text-slate-700"
+                            className="inline-block px-2 py-0.5 rounded text-[9.5px] font-medium bg-slate-50 border border-slate-200/80 text-slate-700"
                           >
                             {tech}
                           </span>
@@ -345,7 +345,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
                   <div className="w-1.5 h-3.5 bg-[#df862b] rounded-full" />
-                  <h2 className="text-xs sm:text-[12.5px] font-black tracking-wider uppercase text-slate-900">
+                  <h2 className="text-[12px] font-black tracking-wider uppercase text-slate-900">
                     HONORS & AWARDS
                   </h2>
                 </div>
@@ -354,17 +354,17 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
                   {cv.awards.map((award, aIdx) => (
                     <div
                       key={aIdx}
-                      className="p-1.5 px-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between gap-2"
+                      className="p-2 px-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between gap-2"
                     >
-                      <div className="flex items-baseline gap-1.5 min-w-0 pr-2">
-                        <span className="font-bold text-[10.5px] text-slate-900 truncate">
+                      <div className="flex flex-wrap items-baseline gap-1.5 min-w-0 pr-2 leading-snug">
+                        <span className="font-bold text-[11px] text-slate-900">
                           {award.title}
                         </span>
-                        <span className="text-[9.5px] text-slate-500 truncate">
+                        <span className="text-[10px] text-slate-500">
                           • {award.organization}
                         </span>
                       </div>
-                      <span className="text-[9px] font-bold text-[#df862b] shrink-0 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">
+                      <span className="text-[9.5px] font-bold text-[#df862b] shrink-0 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60">
                         {award.year}
                       </span>
                     </div>
@@ -376,7 +376,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
 
           {/* ── 5. REFERENCES / VERIFICATION FOOTER ── */}
           <div className="pt-2.5 mt-auto border-t border-slate-100">
-            <div className="flex items-center justify-between text-[10px] text-slate-500">
+            <div className="flex items-center justify-between text-[10.5px] text-slate-500">
               <span className="italic">
                 References & architecture proofs available upon request.
               </span>
