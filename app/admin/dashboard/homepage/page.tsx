@@ -486,7 +486,17 @@ export default function ManageHomepagePage() {
       })
 
       if (!res.ok) throw new Error('Failed to save About Profile')
-      if (updatedAbout) setAbout(updatedAbout)
+      const json = await res.json()
+      if (json.about) {
+        setAbout(prev => ({
+          ...prev,
+          ...json.about,
+          profile_image_url: json.about.profile_image_url ?? prev.profile_image_url,
+          profile_image_id: json.about.profile_image_id ?? prev.profile_image_id,
+        }))
+      } else if (updatedAbout) {
+        setAbout(updatedAbout)
+      }
       toast.success('About Profile saved successfully')
     } catch (error: any) {
       toast.error(error.message || 'Error saving about profile')
@@ -494,6 +504,7 @@ export default function ManageHomepagePage() {
       setSaving(false)
     }
   }
+
 
   // Toggle collection featured status
   const handleToggleCollectionFeatured = async (collectionId: string, currentFeatured: boolean) => {
@@ -1399,15 +1410,27 @@ export default function ManageHomepagePage() {
                   <Label className="text-xs text-zinc-400">Profile Portrait / Brand Logo</Label>
                   <CloudinaryUpload
                     onUploadComplete={result => {
-                      setAbout(prev => ({
-                        ...prev,
+                      const updated: AboutData = {
+                        ...about,
                         profile_image_url: result.image_url,
                         profile_image_id: result.image_id,
-                      }))
+                      }
+                      setAbout(updated)
+                      handleSaveAbout(updated)
+                    }}
+                    onRemove={() => {
+                      const updated: AboutData = {
+                        ...about,
+                        profile_image_url: null,
+                        profile_image_id: null,
+                      }
+                      setAbout(updated)
+                      handleSaveAbout(updated)
                     }}
                     currentImageUrl={about.profile_image_url || undefined}
                     currentImageId={about.profile_image_id || undefined}
                   />
+
                 </div>
 
                 <div className="pt-2 flex items-center justify-between">

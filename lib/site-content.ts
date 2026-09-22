@@ -161,16 +161,17 @@ export async function getAboutContent(): Promise<AboutContentData> {
 
       if (!error && data) {
         const localData = await readLocalData()
-        const img = localData.about?.profile_image_url || data.profile_image_url || data.image_url || null
+        // Database data (uploaded images & content) takes PRIORITY over static local fallback!
+        const img = data.image_url || data.profile_image_url || localData.about?.profile_image_url || '/images/pfp/profile-real.jpg'
         return {
-          id: data.id,
-          title: localData.about?.title || data.title || 'About Me',
-          name: localData.about?.name || 'Peak Deth',
-          tagline: localData.about?.tagline || data.subtitle || 'Full-Stack Programming & Cinematic Photography Design',
-          bio: localData.about?.bio || data.bio || '',
+          id: data.id || 'about-1',
+          title: data.title || localData.about?.title || 'About Me',
+          name: data.name || localData.about?.name || 'Peak Deth',
+          tagline: data.subtitle || data.tagline || localData.about?.tagline || 'Full-Stack Programming & Cinematic Photography Design',
+          bio: data.bio || localData.about?.bio || '',
           profile_image_url: img,
           profile_image_id: img,
-          show_on_homepage: localData.about?.show_on_homepage ?? false,
+          show_on_homepage: data.show_on_homepage ?? localData.about?.show_on_homepage ?? false,
           is_active: true,
           updated_at: data.updated_at,
         }
@@ -209,25 +210,58 @@ export async function saveAboutContentServer(about: AboutContentData): Promise<A
   const isPlaceholder = !isConfiguredSupabase()
 
   if (!isPlaceholder) {
+    const img = updatedAbout.profile_image_url || null
+    const payload = {
+      id: updatedAbout.id || 'about-1',
+      title: updatedAbout.title,
+      subtitle: updatedAbout.tagline || null,
+      bio: updatedAbout.bio || null,
+      image_url: img,
+      updated_at: new Date().toISOString(),
+    }
+
+    let saved = false
+
+    // 1. Try with createAdminClient
     try {
       const { createAdminClient } = await import('@/lib/supabase/server')
       const supabase = createAdminClient()
-      const img = updatedAbout.profile_image_url || null
-      await supabase.from('about_content').upsert({
-        id: updatedAbout.id || 'about-1',
-        title: updatedAbout.title,
-        subtitle: updatedAbout.tagline || null,
-        bio: updatedAbout.bio || null,
-        image_url: img,
-        updated_at: new Date().toISOString(),
-      })
+      const { error: upsertErr } = await supabase.from('about_content').upsert(payload)
+      if (!upsertErr) {
+        saved = true
+      } else {
+        console.warn('Admin client upsert error for about_content:', upsertErr)
+      }
     } catch (e) {
-      console.warn('Failed to sync about content to Supabase (local copy saved):', e)
+      console.warn('Admin client exception for about_content:', e)
+    }
+
+    // 2. Fallback to direct client with anon/publishable key if admin client failed
+    if (!saved) {
+      try {
+        const { createClient } = await import('@supabase/supabase-js')
+        const { SUPABASE_CONFIG } = await import('@/lib/supabase/config')
+        const directClient = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey)
+        const { error: directErr } = await directClient.from('about_content').upsert(payload)
+        if (!directErr) {
+          saved = true
+        } else {
+          console.warn('Direct client upsert error, attempting update:', directErr)
+          const { error: updateErr } = await directClient
+            .from('about_content')
+            .update(payload)
+            .eq('id', payload.id)
+          if (!updateErr) saved = true
+        }
+      } catch (err2) {
+        console.error('Fallback directClient exception for about_content:', err2)
+      }
     }
   }
 
   return updatedAbout
 }
+
 
 // ----------------------------------------------------------------------
 // CONTACT

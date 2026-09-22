@@ -748,17 +748,21 @@ export default function ContentManagementPage() {
         const { error } = await supabase
           .from('about_content')
           .upsert({
-            id: aboutContent?.id,
+            id: aboutContent?.id || 'about-1',
             title: aboutForm.title,
-            name: aboutForm.name || 'Your Name',
+            name: aboutForm.name || 'Peak Deth',
             tagline: aboutForm.tagline || null,
+            subtitle: aboutForm.tagline || null,
             bio: aboutForm.bio || null,
-            content: aboutForm.bio || null, // Backward compatibility
+            content: aboutForm.bio || null,
+            image_url: aboutForm.profile_image_url || null,
             profile_image_url: aboutForm.profile_image_url || null,
             profile_image_id: aboutForm.profile_image_id || null,
             show_on_homepage: aboutForm.show_on_homepage ?? true,
-            is_active: true
+            is_active: true,
+            updated_at: new Date().toISOString(),
           })
+
 
         if (error) throw error
       }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Upload, X, Loader2, Image as ImageIcon, Zap, Crop } from 'lucide-react'
 import Image from 'next/image'
@@ -34,6 +34,7 @@ interface CloudinaryUploadProps {
     image_width: number
     image_height: number
   }) => void
+  onRemove?: () => void
   currentImageUrl?: string
   currentImageId?: string
   folder?: string
@@ -49,7 +50,7 @@ const COMPRESSION_OPTIONS = {
   initialQuality: 0.9
 }
 
-export function CloudinaryUpload({ onUploadComplete, currentImageUrl, currentImageId, folder, cropAspect }: CloudinaryUploadProps) {
+export function CloudinaryUpload({ onUploadComplete, onRemove, currentImageUrl, currentImageId, folder, cropAspect }: CloudinaryUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(currentImageUrl || null)
   const [isDragging, setIsDragging] = useState(false)
@@ -58,6 +59,11 @@ export function CloudinaryUpload({ onUploadComplete, currentImageUrl, currentIma
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragCounter = useRef(0)
+
+  // Sync preview when currentImageUrl changes (e.g. after async fetch)
+  useEffect(() => {
+    setPreview(currentImageUrl || null)
+  }, [currentImageUrl])
 
   const compressImage = async (file: File): Promise<File> => {
     const fileSizeMB = file.size / 1024 / 1024
@@ -235,6 +241,7 @@ export function CloudinaryUpload({ onUploadComplete, currentImageUrl, currentIma
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+    onRemove?.()
   }
 
   const handleDragEnter = (e: React.DragEvent) => {
