@@ -112,6 +112,15 @@ export default function PrintCVPage() {
             min-height: 1160px !important;
           }
 
+          #cv-printable-document aside,
+          #cv-printable-document main {
+            height: 1160px !important;
+            min-height: 1160px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+          }
+
           /* Preserve all colours & backgrounds */
           * {
             print-color-adjust: exact !important;

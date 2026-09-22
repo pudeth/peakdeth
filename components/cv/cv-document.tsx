@@ -34,18 +34,16 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
         width: '100%',
         maxWidth: '820px',
         backgroundColor: '#13161f',
-        backgroundImage: 'linear-gradient(to right, #13161f 0%, #13161f 41.666667%, #ffffff 41.666667%, #ffffff 100%)',
         color: '#1e293b',
       }}
     >
       {/* ================= UNIFIED EXECUTIVE GRID ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 min-h-[1160px] print:h-[1160px]">
+      <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 md:min-h-[1160px] print:h-[1160px]">
         {/* ================= LEFT SIDEBAR (Dark Obsidian Column: 38%) ================= */}
         <aside
-          className="md:col-span-5 print:col-span-5 p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden order-1 text-slate-200 h-full min-h-full"
+          className="md:col-span-5 print:col-span-5 p-5 sm:p-6 flex flex-col md:justify-between relative overflow-hidden order-1 text-slate-200 md:h-full md:min-h-full border-b md:border-b-0 md:border-r border-[#df862b]/25"
           style={{
             backgroundColor: '#13161f',
-            borderRight: '1px solid rgba(223, 134, 43, 0.25)',
           }}
         >
           {/* Subtle architectural ambient background glow */}
@@ -246,8 +244,7 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
 
         {/* ================= RIGHT MAIN COLUMN (Executive Crisp White: 62%) ================= */}
         <main
-          className="md:col-span-7 print:col-span-7 p-5 sm:p-6 flex flex-col justify-between order-2 bg-white text-slate-800 h-full min-h-full"
-          style={{ minHeight: '100%' }}
+          className="md:col-span-7 print:col-span-7 p-5 sm:p-6 flex flex-col md:justify-between order-2 bg-white text-slate-800 md:h-full md:min-h-full"
         >
           <div className="space-y-3.5">
             {/* ── 1. MAIN HEADER (Name, Title, Accent Line) — DESKTOP ONLY ── */}
