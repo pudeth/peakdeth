@@ -23,8 +23,27 @@ interface CVViewProps {
 export function CVView({ initialData }: CVViewProps) {
   const [data, setData] = useState<CVData>(initialData || defaultCvData)
   const [scale, setScale] = useState<number>(100)
+  const [autoScale, setAutoScale] = useState<number>(1)
   const [copied, setCopied] = useState<boolean>(false)
   const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState<boolean>(false)
+
+  // Automatically compute scale so the 820px side-by-side A4 document fits mobile screens perfectly
+  useEffect(() => {
+    const handleResize = () => {
+      const padding = window.innerWidth < 640 ? 16 : 32
+      const available = window.innerWidth - padding
+      if (available < 820) {
+        setAutoScale(Math.min(1, Math.max(0.35, available / 820)))
+      } else {
+        setAutoScale(1)
+      }
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const currentZoom = (scale / 100) * autoScale
 
   // Fetch latest dynamic data on client mount and when window regains focus
   useEffect(() => {
@@ -168,16 +187,16 @@ export function CVView({ initialData }: CVViewProps) {
 
           {/* Right: Actions (Zoom, Fullscreen, Print, Share, Close) */}
           <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-            {/* Zoom Controls — hidden on mobile */}
-            <div className="hidden sm:flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-lg border border-slate-800 text-xs text-slate-400">
-              <button onClick={zoomOut} title="Zoom Out" className="p-1 hover:text-white transition-colors">
+            {/* Zoom Controls (Works on both Mobile & Desktop) */}
+            <div className="flex items-center gap-1 bg-slate-900 px-1.5 sm:px-2 py-1 rounded-lg border border-slate-800 text-xs text-slate-400">
+              <button onClick={zoomOut} title="Zoom Out" className="p-1 hover:text-white transition-colors cursor-pointer">
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
-              <span className="text-[11px] w-9 text-center font-mono">{scale}%</span>
-              <button onClick={zoomIn} title="Zoom In" className="p-1 hover:text-white transition-colors">
+              <span className="text-[10px] sm:text-[11px] w-8 sm:w-9 text-center font-mono">{scale}%</span>
+              <button onClick={zoomIn} title="Zoom In" className="p-1 hover:text-white transition-colors cursor-pointer">
                 <ZoomIn className="w-3.5 h-3.5" />
               </button>
-              <button onClick={resetZoom} title="Reset Zoom" className="p-1 hover:text-white transition-colors border-l border-slate-800 ml-1 pl-1.5">
+              <button onClick={resetZoom} title="Reset Zoom" className="p-1 hover:text-white transition-colors border-l border-slate-800 ml-0.5 sm:ml-1 pl-1 sm:pl-1.5 cursor-pointer">
                 <RotateCcw className="w-3 h-3" />
               </button>
             </div>
@@ -228,26 +247,32 @@ export function CVView({ initialData }: CVViewProps) {
       </div>
 
 
-      {/* ── CV Document ── */}
-      {/* Mobile: full-width, no scale transform. Desktop: centred with zoom. */}
-      <main className="cv-main-container max-w-5xl mx-auto flex justify-center print:p-0 print:m-0 print:max-w-none">
-        {/* On mobile (< md), skip the transform so the CV fills the full width naturally */}
-        <div className="cv-scale-wrapper w-full sm:w-auto relative">
-          {/* Ambient presentation glow backdrop for desktop */}
+      {/* ── CV Document (Side-by-Side A4 format across Mobile & Desktop) ── */}
+      <main className="cv-main-container w-full max-w-5xl mx-auto flex justify-center overflow-x-auto pb-16 px-1 sm:px-0 print:p-0 print:m-0 print:max-w-none">
+        <div
+          className="relative flex justify-center"
+          style={{
+            width: `${Math.round(820 * currentZoom)}px`,
+            height: `${Math.round(1160 * currentZoom)}px`,
+            minWidth: `${Math.round(820 * currentZoom)}px`,
+            minHeight: `${Math.round(1160 * currentZoom)}px`,
+          }}
+        >
+          {/* Ambient presentation glow backdrop */}
           <div
-            className="hidden sm:block absolute -inset-6 rounded-3xl bg-gradient-to-b from-[#df862b]/15 via-amber-600/5 to-transparent blur-2xl pointer-events-none -z-10"
+            className="absolute -inset-6 rounded-3xl bg-gradient-to-b from-[#df862b]/15 via-amber-600/5 to-transparent blur-2xl pointer-events-none -z-10"
             aria-hidden="true"
           />
 
-          {/* Apply zoom only on sm and up */}
           <div
-            className="hidden sm:block transition-transform origin-top"
-            style={{ transform: `scale(${scale / 100})` }}
+            style={{
+              width: '820px',
+              height: '1160px',
+              transform: `scale(${currentZoom})`,
+              transformOrigin: 'top left',
+              transition: 'transform 0.15s ease-out',
+            }}
           >
-            <CVDocument data={data} />
-          </div>
-          {/* Mobile: no transform, CV flows naturally */}
-          <div className="block sm:hidden w-full">
             <CVDocument data={data} />
           </div>
         </div>
@@ -284,16 +309,32 @@ export function CVView({ initialData }: CVViewProps) {
             </button>
           </div>
 
-          {/* The Pristine CV Document */}
+          {/* The Pristine CV Document in Fullscreen Modal */}
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[820px] pb-16 relative"
+            className="pb-16 relative flex justify-center"
+            style={{
+              width: `${Math.round(820 * currentZoom)}px`,
+              height: `${Math.round(1160 * currentZoom)}px`,
+              minWidth: `${Math.round(820 * currentZoom)}px`,
+              minHeight: `${Math.round(1160 * currentZoom)}px`,
+            }}
           >
             <div
-              className="hidden sm:block absolute -inset-6 rounded-3xl bg-gradient-to-b from-[#df862b]/20 via-amber-600/5 to-transparent blur-2xl pointer-events-none -z-10"
+              className="absolute -inset-6 rounded-3xl bg-gradient-to-b from-[#df862b]/20 via-amber-600/5 to-transparent blur-2xl pointer-events-none -z-10"
               aria-hidden="true"
             />
-            <CVDocument data={data} />
+            <div
+              style={{
+                width: '820px',
+                height: '1160px',
+                transform: `scale(${currentZoom})`,
+                transformOrigin: 'top left',
+                transition: 'transform 0.15s ease-out',
+              }}
+            >
+              <CVDocument data={data} />
+            </div>
           </div>
         </div>
       )}

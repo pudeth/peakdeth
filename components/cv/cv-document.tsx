@@ -29,20 +29,23 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
   return (
     <div
       id="cv-printable-document"
-      className="print-sheet mx-auto font-sans transition-all duration-300 relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.08)] print:border-none print:shadow-none print:ring-0 print:rounded-none print:overflow-hidden print:w-full print:max-w-none"
+      className="print-sheet mx-auto font-sans relative rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.08)] print:border-none print:shadow-none print:ring-0 print:rounded-none print:overflow-hidden print:w-full print:max-w-none"
       style={{
-        width: '100%',
+        width: '820px',
+        minWidth: '820px',
         maxWidth: '820px',
+        height: '1160px',
+        minHeight: '1160px',
         backgroundColor: '#13161f',
         backgroundImage: 'linear-gradient(to right, #13161f 0%, #13161f 41.666667%, #ffffff 41.666667%, #ffffff 100%)',
         color: '#1e293b',
       }}
     >
-      {/* ================= UNIFIED EXECUTIVE GRID ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-12 print:grid-cols-12 md:min-h-[1160px] print:h-[1160px]">
-        {/* ================= LEFT SIDEBAR (Dark Obsidian Column: 38%) ================= */}
+      {/* ================= UNIFIED EXECUTIVE GRID (Always Side-by-Side 12-Col A4) ================= */}
+      <div className="grid grid-cols-12 h-full min-h-[1160px]">
+        {/* ================= LEFT SIDEBAR (Dark Obsidian Column: 38% = 5 cols) ================= */}
         <aside
-          className="md:col-span-5 print:col-span-5 p-5 sm:p-6 flex flex-col md:justify-between relative overflow-hidden order-1 text-slate-200 md:h-full md:min-h-full border-b md:border-b-0 md:border-r border-[#df862b]/25"
+          className="col-span-5 p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden text-slate-200 h-full min-h-full border-r border-[#df862b]/25"
           style={{
             backgroundColor: '#13161f',
           }}
@@ -77,16 +80,6 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
                   className="object-cover object-top"
                   sizes="136px"
                 />
-              </div>
-
-              {/* Mobile Only: Name & Title under avatar */}
-              <div className="block md:hidden print:hidden mt-3">
-                <h1 className="text-2xl font-black tracking-wide uppercase text-white">
-                  {cv.name}
-                </h1>
-                <div className="text-xs font-bold uppercase tracking-wider text-[#df862b] mt-0.5">
-                  {cv.roleTitle}
-                </div>
               </div>
             </div>
 
@@ -243,13 +236,13 @@ export function CVDocument({ interactive = true, data }: CVDocumentProps) {
           </div>
         </aside>
 
-        {/* ================= RIGHT MAIN COLUMN (Executive Crisp White: 62%) ================= */}
+        {/* ================= RIGHT MAIN COLUMN (Executive Crisp White: 62% = 7 cols) ================= */}
         <main
-          className="md:col-span-7 print:col-span-7 p-5 sm:p-6 flex flex-col md:justify-between order-2 bg-white text-slate-800 md:h-full md:min-h-full"
+          className="col-span-7 p-5 sm:p-6 flex flex-col justify-between bg-white text-slate-800 h-full min-h-full"
         >
           <div className="space-y-3.5">
-            {/* ── 1. MAIN HEADER (Name, Title, Accent Line) — DESKTOP ONLY ── */}
-            <div className="hidden md:block print:block border-b border-slate-100 pb-3">
+            {/* ── 1. MAIN HEADER (Name, Title, Accent Line) ── */}
+            <div className="border-b border-slate-100 pb-3">
               <div className="flex items-baseline justify-between gap-4">
                 <h1 className="text-2xl sm:text-[32px] font-black tracking-tight text-slate-950 font-sans uppercase leading-none">
                   {cv.name}
