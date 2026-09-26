@@ -1,5 +1,6 @@
 'use client'
 
+// Refresh client cache
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { HeroContent, Service, AboutContent, AboutExperience, AboutSkill, AboutAward, AboutEquipmentCategory, AboutEquipmentItem, ContactInfo, SiteSettings } from '@/types/database'
@@ -14,13 +15,21 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CloudinaryUpload } from '@/components/cloudinary-upload'
-import { Loader2, Save, Eye, EyeOff, Settings, User, Mail, MapPin, Globe, Phone, ArrowLeft, Home, Sparkles, ExternalLink, Trash2, Edit, Link as LinkIcon, PlusCircle, RotateCcw, ArrowUpRight } from 'lucide-react'
+import { Loader2, Save, Eye, EyeOff, Settings, User, Mail, MapPin, Globe, Phone, ArrowLeft, Home, Sparkles, ExternalLink, Trash2, Edit, Link as LinkIcon, PlusCircle, RotateCcw, ArrowUpRight, Briefcase, GraduationCap, Code2, Award, Camera, Printer, FileText, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 import NextImage from 'next/image'
 import Link from 'next/link'
 import { revalidatePublicPaths } from '@/lib/revalidate-client'
 import { WebsitePreviewModal } from '@/components/website-preview-modal'
 import { CardWebsitePreview } from '@/components/card-website-preview'
+import { CVExperienceManager } from '@/components/admin/cv/cv-experience-manager'
+import { CVEducationManager } from '@/components/admin/cv/cv-education-manager'
+import { CVSkillsManager } from '@/components/admin/cv/cv-skills-manager'
+import { CVAwardsManager } from '@/components/admin/cv/cv-awards-manager'
+import { CVLivePreviewTab } from '@/components/admin/cv/cv-live-preview-tab'
+import { CVProfileManager } from '@/components/admin/cv/cv-profile-manager'
+import { BrandLogoCard } from '@/components/admin/brand-logo-card'
+import { cvData as defaultCvData, CVData, ExperienceItem, EducationItem, AwardItem, SkillCategory } from '@/data/cv-data'
 
 type ContactTemplate = {
   title: string
@@ -179,6 +188,15 @@ export default function ContentManagementPage() {
   const [aboutEquipmentItems, setAboutEquipmentItems] = useState<AboutEquipmentItem[]>([])
   const [contactInfo, setContactInfo] = useState<ContactInfo[]>([])
   const [siteSettings, setSiteSettings] = useState<SiteSettings[]>([])
+  const [cvData, setCvData] = useState<CVData>(defaultCvData)
+  const [savingCV, setSavingCV] = useState(false)
+  const [quickContact, setQuickContact] = useState({
+    phone: '',
+    email: '',
+    location: '',
+    website: '',
+    instagram: '',
+  })
 
   // Loading states
   const [loading, setLoading] = useState({
@@ -471,6 +489,26 @@ export default function ContentManagementPage() {
         .order('key', { ascending: true })
 
       setSiteSettings(settingsData || [])
+
+      // Load CV data
+      try {
+        const cvRes = await fetch(`/api/cv?t=${Date.now()}`, { cache: 'no-store' })
+        if (cvRes.ok) {
+          const json = await cvRes.json()
+          if (json.cv) {
+            setCvData(json.cv)
+            setQuickContact({
+              phone: json.cv.phone || '',
+              email: json.cv.email || '',
+              location: json.cv.location || '',
+              website: json.cv.website?.url || '',
+              instagram: json.cv.social?.label || '',
+            })
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load CV data in content page:', e)
+      }
 
     } catch (error: unknown) {
       console.error('Error loading content:', error)
@@ -767,7 +805,31 @@ export default function ContentManagementPage() {
         if (error) throw error
       }
 
-      toast.success('About content saved successfully')
+      // Sync to CV Data
+      const cvPatch: Partial<CVData> = {
+        name: (aboutForm.name || 'PEAK DETH').toUpperCase(),
+        roleTitle: (aboutForm.tagline || 'FULL-STACK SOFTWARE ARCHITECT').toUpperCase(),
+        summary: aboutForm.bio || '',
+        photoUrl: aboutForm.profile_image_url || cvData.photoUrl,
+      }
+      if (quickContact.phone) cvPatch.phone = quickContact.phone
+      if (quickContact.email) cvPatch.email = quickContact.email
+      if (quickContact.location) cvPatch.location = quickContact.location
+      if (quickContact.website) {
+        cvPatch.website = {
+          label: quickContact.website.replace(/^https?:\/\//, '').replace(/\/$/, ''),
+          url: quickContact.website.startsWith('http') ? quickContact.website : `https://${quickContact.website}`
+        }
+      }
+      if (quickContact.instagram) {
+        cvPatch.social = {
+          platform: 'Instagram',
+          label: quickContact.instagram.startsWith('@') ? quickContact.instagram : `@${quickContact.instagram}`,
+          url: `https://instagram.com/${quickContact.instagram.replace(/^@/, '')}`
+        }
+      }
+
+      await syncAndSaveCV(cvPatch, 'About content & CV profile saved successfully')
       await revalidateContentPages()
       await loadAllContent()
     } catch (error: unknown) {
@@ -862,6 +924,96 @@ export default function ContentManagementPage() {
       toast.error('Failed to save site setting')
     } finally {
       setLoading(prev => ({ ...prev, settings: false }))
+    }
+  }
+
+  // -------------------------------------------------------------
+  // CV & Profile Synchronization Handlers
+  // -------------------------------------------------------------
+  const syncAndSaveCV = async (patch: Partial<CVData>, successMessage = 'CV updated successfully') => {
+    try {
+      setSavingCV(true)
+      const res = await fetch('/api/cv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      if (!res.ok) throw new Error('Failed to save CV')
+      const json = await res.json()
+      if (json.cv) {
+        setCvData(json.cv)
+      }
+      toast.success(successMessage)
+      await revalidateContentPages()
+    } catch (err: any) {
+      console.error('Error updating CV:', err)
+      toast.error(err.message || 'Failed to update CV')
+    } finally {
+      setSavingCV(false)
+    }
+  }
+
+  const handleUpdateProfile = async (patch: Partial<CVData>) => {
+    await syncAndSaveCV(patch, 'CV profile & contact channels updated successfully')
+    if (patch.name || patch.roleTitle || patch.summary || patch.photoUrl) {
+      setAboutForm((prev) => ({
+        ...prev,
+        name: patch.name || prev.name,
+        tagline: patch.roleTitle || prev.tagline,
+        bio: patch.summary || prev.bio,
+        profile_image_url: patch.photoUrl || prev.profile_image_url,
+      }))
+    }
+  }
+
+  const handleUpdateExperiences = async (updated: ExperienceItem[]) => {
+    await syncAndSaveCV({ experiences: updated }, 'Experience updated successfully')
+  }
+
+  const handleUpdateEducation = async (updated: EducationItem[]) => {
+    await syncAndSaveCV({ education: updated }, 'Education updated successfully')
+  }
+
+  const handleUpdateCompetencies = async (updated: string[]) => {
+    await syncAndSaveCV({ coreCompetencies: updated }, 'Core competencies updated successfully')
+  }
+
+  const handleUpdateExpertise = async (updated: SkillCategory[]) => {
+    await syncAndSaveCV({ technicalExpertise: updated }, 'Technical expertise updated successfully')
+  }
+
+  const handleUpdateAwards = async (updated: AwardItem[]) => {
+    await syncAndSaveCV({ awards: updated }, 'Awards updated successfully')
+  }
+
+  const addAboutSkill = async (name: string, icon = '⚡') => {
+    try {
+      const { error } = await supabase.from('about_skills').insert({
+        name,
+        icon,
+        about_content_id: aboutContent?.id,
+        order: aboutSkills.length,
+      })
+      if (error) throw error
+      toast.success('Skill added')
+      await revalidateContentPages()
+      await loadAllContent()
+    } catch (e: any) {
+      console.error(e)
+      toast.error('Failed to add skill')
+    }
+  }
+
+  const deleteAboutSkill = async (id: string) => {
+    try {
+      const { error } = await supabase.from('about_skills').delete().eq('id', id)
+      if (error) throw error
+      toast.success('Skill removed')
+      await revalidateContentPages()
+      await loadAllContent()
+    } catch (e: any) {
+      console.error(e)
+      toast.error('Failed to delete skill')
     }
   }
 
@@ -1160,25 +1312,40 @@ CREATE TABLE services (
       )}
 
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">About & Profile Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your personal biography, professional experience, technical skills, awards, photography gear, and site settings.
+          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+            <span>About & CV Management</span>
+            <Badge className="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-mono">
+              Live Synchronized
+            </Badge>
+          </h1>
+          <p className="text-muted-foreground mt-1.5 text-sm">
+            Easily edit and update every part of your Profile, CV / Resume, experience, education, skills, and awards in real time.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" asChild className="border-white/10 text-zinc-300 hover:text-white rounded-xl">
             <a href="/admin/dashboard">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
+              Dashboard
             </a>
           </Button>
-          <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
+          <Button variant="outline" size="sm" asChild className="border-white/10 text-zinc-300 hover:text-white rounded-xl">
             <a href="/" target="_blank" rel="noopener noreferrer">
               <Home className="w-4 h-4 mr-2" />
-              View Website
+              Website
             </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10 rounded-xl">
+            <a href="/cv" target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="w-4 h-4 mr-2" />
+              View Live CV
+            </a>
+          </Button>
+          <Button size="sm" onClick={() => window.open('/cv/print', '_blank')} className="bg-amber-600 hover:bg-amber-500 text-white rounded-xl shadow-lg">
+            <Printer className="w-4 h-4 mr-2" />
+            Print CV (A4 PDF)
           </Button>
         </div>
       </div>
@@ -1202,26 +1369,38 @@ CREATE TABLE services (
         </div>
       </div>
 
-      <Tabs defaultValue="about" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto p-1.5 gap-1.5 bg-zinc-900/60 border border-white/10 rounded-2xl">
-          <TabsTrigger value="about" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2">
-            <User className="w-4 h-4 mr-2" />
-            About
+      <Tabs defaultValue="cv-profile" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 h-auto p-1.5 gap-1.5 bg-zinc-900/60 border border-white/10 rounded-2xl">
+          <TabsTrigger value="cv-profile" className="rounded-xl data-[state=active]:bg-amber-600 data-[state=active]:text-white font-medium py-2 text-xs">
+            <User className="w-3.5 h-3.5 mr-1.5" />
+            CV Profile & Bio
           </TabsTrigger>
-          <TabsTrigger value="experience" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2">
+          <TabsTrigger value="experience" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2 text-xs">
+            <Briefcase className="w-3.5 h-3.5 mr-1.5" />
             Experience
           </TabsTrigger>
-          <TabsTrigger value="skills" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2">
-            Skills
+          <TabsTrigger value="education" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2 text-xs">
+            <GraduationCap className="w-3.5 h-3.5 mr-1.5" />
+            Education
           </TabsTrigger>
-          <TabsTrigger value="awards" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2">
+          <TabsTrigger value="skills" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2 text-xs">
+            <Code2 className="w-3.5 h-3.5 mr-1.5" />
+            Skills & Stack
+          </TabsTrigger>
+          <TabsTrigger value="awards" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2 text-xs">
+            <Award className="w-3.5 h-3.5 mr-1.5" />
             Awards
           </TabsTrigger>
-          <TabsTrigger value="equipment" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2">
-            Equipment
+          <TabsTrigger value="cv-preview" className="rounded-xl data-[state=active]:bg-emerald-600 data-[state=active]:text-white font-medium py-2 text-xs">
+            <Eye className="w-3.5 h-3.5 mr-1.5" />
+            CV Live Preview
           </TabsTrigger>
-          <TabsTrigger value="settings" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2">
-            <Settings className="w-4 h-4 mr-2" />
+          <TabsTrigger value="about" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2 text-xs">
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+            Artist Web Bio
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium py-2 text-xs">
+            <Settings className="w-3.5 h-3.5 mr-1.5" />
             Settings
           </TabsTrigger>
         </TabsList>
@@ -1373,17 +1552,78 @@ CREATE TABLE services (
                 </div>
               </div>
 
+              <div className="pt-2">
+                <div className="p-4 rounded-xl bg-zinc-950/60 border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                    <span className="text-xs font-semibold text-white flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                      CV Contact & Direct Channels (Synchronized with CV Document)
+                    </span>
+                    <Badge variant="outline" className="text-[10px] text-zinc-400 border-white/10">
+                      Auto-syncs to CV
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-zinc-400">Phone Number</Label>
+                      <Input
+                        value={quickContact.phone}
+                        onChange={(e) => setQuickContact({ ...quickContact, phone: e.target.value })}
+                        placeholder="+855 68656263"
+                        className="h-8 text-xs bg-zinc-900 border-white/10 text-white rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-zinc-400">Public Email</Label>
+                      <Input
+                        value={quickContact.email}
+                        onChange={(e) => setQuickContact({ ...quickContact, email: e.target.value })}
+                        placeholder="hello@peakdeth.com"
+                        className="h-8 text-xs bg-zinc-900 border-white/10 text-white rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-zinc-400">City / Country Location</Label>
+                      <Input
+                        value={quickContact.location}
+                        onChange={(e) => setQuickContact({ ...quickContact, location: e.target.value })}
+                        placeholder="Phnom Penh, Cambodia"
+                        className="h-8 text-xs bg-zinc-900 border-white/10 text-white rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-zinc-400">Website URL</Label>
+                      <Input
+                        value={quickContact.website}
+                        onChange={(e) => setQuickContact({ ...quickContact, website: e.target.value })}
+                        placeholder="https://peakdeth.com"
+                        className="h-8 text-xs bg-zinc-900 border-white/10 text-white rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-zinc-400">Instagram Handle</Label>
+                      <Input
+                        value={quickContact.instagram}
+                        onChange={(e) => setQuickContact({ ...quickContact, instagram: e.target.value })}
+                        placeholder="@peakdeth"
+                        className="h-8 text-xs bg-zinc-900 border-white/10 text-white rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <Separator />
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-3">
                 <Button
                   onClick={saveAboutContent}
-                  disabled={loading.about}
-                  className="min-w-32"
+                  disabled={loading.about || savingCV}
+                  className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg min-w-44 h-10 text-xs font-semibold"
                 >
-                  {loading.about && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {(loading.about || savingCV) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   <Save className="w-4 h-4 mr-2" />
-                  Save About Content
+                  Save Bio & Sync CV
                 </Button>
               </div>
             </CardContent>
@@ -1408,272 +1648,64 @@ CREATE TABLE services (
           </Card>
         </TabsContent>
 
+        {/* CV Profile & Bio Tab */}
+        <TabsContent value="cv-profile" className="space-y-6">
+          <CVProfileManager
+            cvData={cvData}
+            onUpdate={handleUpdateProfile}
+            saving={savingCV}
+          />
+        </TabsContent>
+
         {/* Experience Tab */}
         <TabsContent value="experience" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Professional Experience</CardTitle>
-              <CardDescription>
-                Manage your professional experience and career highlights
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Add New Experience */}
-              <div className="border rounded-lg p-4 space-y-4">
-                <h3 className="font-semibold">Add Experience</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="exp-title">Title</Label>
-                    <Input
-                      id="exp-title"
-                      value={experienceForm.title}
-                      onChange={(e) => setExperienceForm(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Job Title"
-                    />
-                  </div>
+          <CVExperienceManager
+            experiences={cvData.experiences}
+            onUpdate={handleUpdateExperiences}
+            saving={savingCV}
+          />
+        </TabsContent>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="exp-organization">Organization</Label>
-                    <Input
-                      id="exp-organization"
-                      value={experienceForm.organization}
-                      onChange={(e) => setExperienceForm(prev => ({ ...prev, organization: e.target.value }))}
-                      placeholder="Company Name"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="exp-period">Period</Label>
-                    <Input
-                      id="exp-period"
-                      value={experienceForm.period}
-                      onChange={(e) => setExperienceForm(prev => ({ ...prev, period: e.target.value }))}
-                      placeholder="2020 - Present"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="exp-description">Description</Label>
-                  <Textarea
-                    id="exp-description"
-                    value={experienceForm.description}
-                    onChange={(e) => setExperienceForm(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe your role and achievements..."
-                    rows={3}
-                  />
-                </div>
-
-                <Button
-                  onClick={saveExperience}
-                  disabled={loading.experience || !experienceForm.title.trim() || !experienceForm.organization.trim()}
-                  className="w-full md:w-auto"
-                >
-                  {loading.experience && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Add Experience
-                </Button>
-              </div>
-
-              {/* Existing Experience */}
-              <div className="space-y-4">
-                <h3 className="font-semibold">Experience</h3>
-                {aboutExperience.length === 0 ? (
-                  <p className="text-muted-foreground">No experience added yet.</p>
-                ) : (
-                  <div className="grid gap-4">
-                    {aboutExperience.map((exp) => (
-                      <Card key={exp.id}>
-                        <CardContent className="pt-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h4 className="font-semibold">{exp.title}</h4>
-                              <p className="text-blue-400 font-medium">{exp.organization}</p>
-                              <p className="text-sm text-muted-foreground">{exp.period}</p>
-                              {exp.description && (
-                                <p className="text-sm mt-2">{exp.description}</p>
-                              )}
-                              <Badge variant="secondary" className="mt-2">Order: {exp.order}</Badge>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="default">Active</Badge>
-                              <Button variant="outline" size="sm">
-                                Edit
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        {/* Education Tab */}
+        <TabsContent value="education" className="space-y-6">
+          <CVEducationManager
+            education={cvData.education}
+            onUpdate={handleUpdateEducation}
+            saving={savingCV}
+          />
         </TabsContent>
 
         {/* Skills Tab */}
         <TabsContent value="skills" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Skills & Expertise</CardTitle>
-              <CardDescription>
-                Manage your technical skills and creative expertise
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Add New Skill */}
-              <div className="border rounded-lg p-4 space-y-4">
-                <h3 className="font-semibold">Add Skill</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="skill-name">Skill Name</Label>
-                    <Input
-                      id="skill-name"
-                      value={skillForm.name}
-                      onChange={(e) => setSkillForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Photography"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  onClick={saveSkill}
-                  disabled={loading.skills || !skillForm.name.trim()}
-                  className="w-full md:w-auto"
-                >
-                  {loading.skills && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Add Skill
-                </Button>
-              </div>
-
-              {/* Existing Skills */}
-              <div className="space-y-4">
-                <h3 className="font-semibold">Skills</h3>
-                {aboutSkills.length === 0 ? (
-                  <p className="text-muted-foreground">No skills added yet.</p>
-                ) : (
-                  <div className="grid gap-4">
-                    {aboutSkills.map((skill) => (
-                      <Card key={skill.id}>
-                        <CardContent className="pt-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="text-2xl">{skill.icon || '💡'}</div>
-                              <div className="flex-1">
-                                <span className="font-semibold">{skill.name}</span>
-                                <Badge variant="secondary" className="ml-2">Order: {skill.order}</Badge>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="default">Active</Badge>
-                              <Button variant="outline" size="sm">
-                                Edit
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <CVSkillsManager
+            coreCompetencies={cvData.coreCompetencies}
+            technicalExpertise={cvData.technicalExpertise}
+            aboutSkills={aboutSkills}
+            onUpdateCompetencies={handleUpdateCompetencies}
+            onUpdateExpertise={handleUpdateExpertise}
+            onAddAboutSkill={addAboutSkill}
+            onDeleteAboutSkill={deleteAboutSkill}
+            saving={savingCV}
+          />
         </TabsContent>
 
         {/* Awards Tab */}
         <TabsContent value="awards" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Awards & Recognition</CardTitle>
-              <CardDescription>
-                Manage your awards, certifications, and professional recognition
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Add New Award */}
-              <div className="border rounded-lg p-4 space-y-4">
-                <h3 className="font-semibold">Add Award</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="award-title">Award Title</Label>
-                    <Input
-                      id="award-title"
-                      value={awardForm.title}
-                      onChange={(e) => setAwardForm(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Best Photographer 2024"
-                    />
-                  </div>
+          <CVAwardsManager
+            awards={cvData.awards}
+            onUpdate={handleUpdateAwards}
+            saving={savingCV}
+          />
+        </TabsContent>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="award-organization">Organization</Label>
-                    <Input
-                      id="award-organization"
-                      value={awardForm.organization}
-                      onChange={(e) => setAwardForm(prev => ({ ...prev, organization: e.target.value }))}
-                      placeholder="Photography Association"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="award-year">Year</Label>
-                    <Input
-                      id="award-year"
-                      value={awardForm.year}
-                      onChange={(e) => setAwardForm(prev => ({ ...prev, year: e.target.value }))}
-                      placeholder="2024"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  onClick={saveAward}
-                  disabled={loading.awards || !awardForm.title.trim() || !awardForm.organization.trim()}
-                  className="w-full md:w-auto"
-                >
-                  {loading.awards && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Add Award
-                </Button>
-              </div>
-
-              {/* Existing Awards */}
-              <div className="space-y-4">
-                <h3 className="font-semibold">Awards</h3>
-                {aboutAwards.length === 0 ? (
-                  <p className="text-muted-foreground">No awards added yet.</p>
-                ) : (
-                  <div className="grid gap-4">
-                    {aboutAwards.map((award) => (
-                      <Card key={award.id}>
-                        <CardContent className="pt-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h4 className="font-semibold">{award.title}</h4>
-                              <p className="text-blue-400 font-medium">{award.organization}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="secondary">{award.year}</Badge>
-                                <Badge variant="outline">Order: {award.order}</Badge>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="default">Active</Badge>
-                              <Button variant="outline" size="sm">
-                                Edit
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        {/* CV Live Preview Tab */}
+        <TabsContent value="cv-preview" className="space-y-6">
+          <CVLivePreviewTab
+            cvData={cvData}
+            onRefresh={loadAllContent}
+            onUpdateProfile={handleUpdateProfile}
+            saving={savingCV}
+          />
         </TabsContent>
 
         {/* Equipment Tab */}
@@ -1802,6 +1834,7 @@ CREATE TABLE services (
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-6">
+          <BrandLogoCard />
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

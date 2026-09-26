@@ -13,6 +13,8 @@ import { VisuallyHidden } from '@/components/ui/visually-hidden'
 import { cn } from '@/lib/utils'
 import { Toaster } from 'sonner'
 
+import { AdminBrandLogo } from '@/components/admin/admin-brand-logo'
+
 const navItems = [
   { href: '/admin/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/dashboard/homepage', label: 'Homepage', icon: Home },
@@ -29,15 +31,7 @@ function SidebarContent({ pathname, userEmail, onLogout }: { pathname: string, u
     <div className="flex flex-col h-full bg-zinc-950/50 backdrop-blur-xl border-r border-white/10 text-zinc-300">
       {/* Brand Header */}
       <div className="p-6">
-        <Link href="/admin/dashboard" className="flex items-center gap-3 transition-opacity hover:opacity-80">
-          <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shadow-inner">
-            <span className="text-white font-bold text-sm tracking-wider">PD</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-white tracking-wide uppercase">Admin Panel</span>
-            <span className="text-xs text-zinc-500">Peak Deth</span>
-          </div>
-        </Link>
+        <AdminBrandLogo />
       </div>
 
       {/* Navigation */}

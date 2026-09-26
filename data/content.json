@@ -14,7 +14,7 @@
       "id": "contact-1",
       "type": "email",
       "label": "Email",
-      "value": "hello@peakdeth.com",
+      "value": "peakmao007@gmail.com",
       "icon": "📧",
       "is_active": true,
       "order": 0,
@@ -58,7 +58,7 @@
       "id": "contact-5",
       "type": "website",
       "label": "Website",
-      "value": "https://peakdeth.com",
+      "value": "https://peakdeth.vercel.app",
       "icon": "🌐",
       "is_active": true,
       "order": 4,
@@ -69,13 +69,158 @@
   "about": {
     "id": "about-1",
     "title": "About Me",
-    "name": "Peak Deth",
-    "tagline": "Full-Stack Programming & Cinematic Photography Design",
+    "name": "PEAK DETH",
+    "tagline": "FULL-STACK PROGRAMMING & CINEMATIC PHOTOGRAPHY DESIGN",
     "bio": "A multidisciplinary Full-Stack Developer and Visual Artist bridging high-performance software engineering with cinematic photography and design. Dedicated to architecting robust enterprise systems, bespoke POS solutions, and modern mobile & web apps, while capturing evocative visual narratives and crafting refined aesthetic designs.",
-    "profile_image_url": "/images/pfp/profile-real.jpg",
-    "profile_image_id": "local_profile_real",
+    "profile_image_url": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1790056011/ux39vvuij9rukzzlf5df.jpg",
+    "profile_image_id": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1790056011/ux39vvuij9rukzzlf5df.jpg",
     "show_on_homepage": false,
     "is_active": true,
-    "updated_at": "2026-09-13T10:02:00.000Z"
+    "updated_at": "2026-09-26T02:39:14.749Z"
+  },
+  "cv": {
+    "name": "PEAK DETH",
+    "roleTitle": "FULL-STACK PROGRAMMING & CINEMATIC PHOTOGRAPHY DESIGN",
+    "phone": "+855 68656263",
+    "email": "peakmao007@gmail.com",
+    "location": "Phnom Penh, Cambodia",
+    "website": {
+      "label": "peakdeth.vercel.app",
+      "url": "https://peakdeth.vercel.app"
+    },
+    "social": {
+      "platform": "Instagram",
+      "label": "@peakdeth",
+      "url": "https://instagram.com/peakdeth"
+    },
+    "photoUrl": "https://res.cloudinary.com/dpz7vpmf8/image/upload/v1790056011/ux39vvuij9rukzzlf5df.jpg",
+    "summary": "A multidisciplinary Full-Stack Developer and Visual Artist bridging high-performance software engineering with cinematic photography and design. Dedicated to architecting robust enterprise systems, bespoke POS solutions, and modern mobile & web apps, while capturing evocative visual narratives and crafting refined aesthetic designs.",
+    "experiences": [
+      {
+        "id": "peak-deth-solutions",
+        "company": "Peak Deth Solutions",
+        "period": "2022 — Present",
+        "role": "Senior Systems Architect & Full-Stack Engineer",
+        "location": "Phnom Penh, Cambodia",
+        "bullets": [
+          "Design, architect, and deploy bespoke POS systems, ERP/CRM management software, and enterprise web applications.",
+          "Engineer cross-platform mobile applications for iOS and Android tailored to retail and business workflows.",
+          "Lead architectural decisions, real-time database synchronizations, and secure cloud infrastructure pipelines."
+        ],
+        "technologies": [
+          "Next.js",
+          "React Native",
+          "TypeScript",
+          "PostgreSQL",
+          "Supabase",
+          "Docker",
+          "Tailwind CSS"
+        ]
+      },
+      {
+        "id": "enterprise-tech-group",
+        "company": "Enterprise Technology Group",
+        "period": "2020 — 2022",
+        "role": "Digital Systems Developer",
+        "location": "Phnom Penh, Cambodia",
+        "bullets": [
+          "Engineered automated business workflows, real-time inventory management databases, and customer-facing apps.",
+          "Built secure REST APIs, payment integrations, and authentication protocols for corporate clients.",
+          "Collaborated across cross-functional teams to ensure high uptime, reliability, and modern UI/UX design."
+        ],
+        "technologies": [
+          "JavaScript",
+          "Node.js",
+          "REST APIs",
+          "SQL Databases",
+          "Cloud Infrastructure",
+          "CI/CD Pipelines"
+        ]
+      }
+    ],
+    "education": [
+      {
+        "institution": "Computer Science & Software Architecture",
+        "degree": "Bachelor's Degree in Computer Science",
+        "location": "Phnom Penh, Cambodia",
+        "year": "2020 — 2024"
+      },
+      {
+        "institution": "Advanced Enterprise & Mobile Engineering",
+        "degree": "Specialized Full-Stack & Cloud Architecture Certifications",
+        "location": "Cambodia",
+        "year": "2024"
+      }
+    ],
+    "awards": [
+      {
+        "title": "Excellence in Enterprise System Architecture",
+        "organization": "Tech Innovations Summit",
+        "year": "2025"
+      },
+      {
+        "title": "Outstanding Digital Solution Deployment",
+        "organization": "Cambodia Business Software Awards",
+        "year": "2024"
+      }
+    ],
+    "coreCompetencies": [
+      "Full-Stack System Architecture",
+      "POS & Billing Systems",
+      "Enterprise Management (ERP/CRM)",
+      "Mobile App Development (iOS & Android)",
+      "Real-Time Databases & Cloud APIs",
+      "UI/UX Interaction & Visual Design",
+      "Automated CI/CD & Cloud Orchestration"
+    ],
+    "technicalExpertise": [
+      {
+        "category": "Web & Mobile Engineering",
+        "skills": [
+          "Next.js",
+          "React",
+          "React Native",
+          "TypeScript",
+          "Node.js",
+          "Tailwind CSS",
+          "RESTful APIs"
+        ]
+      },
+      {
+        "category": "Enterprise & Databases",
+        "skills": [
+          "POS Solutions",
+          "ERP/CRM Platforms",
+          "PostgreSQL",
+          "Supabase",
+          "Real-Time Sync",
+          "SQL"
+        ]
+      },
+      {
+        "category": "Cloud & Infrastructure",
+        "skills": [
+          "Docker",
+          "Vercel Cloud",
+          "CI/CD Pipelines",
+          "Git & GitHub",
+          "Microservices"
+        ]
+      },
+      {
+        "category": "Design & Visual Production",
+        "skills": [
+          "UI/UX Design",
+          "Cinematic Photography",
+          "Video Production",
+          "4K HDR Color Calibration"
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "url": "/images/logo/logo_white.png",
+    "text": "PD",
+    "updated_at": "2026-09-26T02:45:32.046Z"
   }
 }

@@ -54,18 +54,18 @@ export const cvData: CVData = {
   name: 'PEAK DETH',
   roleTitle: 'FULL-STACK SOFTWARE ARCHITECT & CINEMATIC DESIGNER',
   phone: '+855 68656263',
-  email: 'hello@peakdeth.com',
+  email: 'peakmao007@gmail.com',
   location: 'Phnom Penh, Cambodia',
   website: {
-    label: 'peakdeth.com',
-    url: 'https://peakdeth.com',
+    label: 'peakdeth.vercel.app',
+    url: 'https://peakdeth.vercel.app',
   },
   social: {
     platform: 'Instagram',
     label: '@peakdeth',
     url: 'https://instagram.com/peakdeth',
   },
-  photoUrl: '/images/pfp/profile-real.jpg',
+  photoUrl: 'https://res.cloudinary.com/dpz7vpmf8/image/upload/v1790056011/ux39vvuij9rukzzlf5df.jpg',
   summary:
     'A multidisciplinary Full-Stack Developer and Visual Artist bridging high-performance software engineering with cinematic photography and design. Dedicated to architecting robust enterprise systems, bespoke POS solutions, and modern mobile & web apps, while capturing evocative visual narratives and crafting refined aesthetic designs.',
   experiences: [

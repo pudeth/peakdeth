@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useCallback } from "react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -28,6 +29,26 @@ export function Header() {
   const { t } = useLanguage()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+    fetch('/api/content/logo?t=' + Date.now(), { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (json?.logo?.url && isMounted) setLogoUrl(json.logo.url)
+      })
+      .catch(() => {})
+
+    const handleLogoUpdated = (e: any) => {
+      if (e.detail?.url && isMounted) setLogoUrl(e.detail.url)
+    }
+    window.addEventListener('brand_logo_updated', handleLogoUpdated)
+    return () => {
+      isMounted = false
+      window.removeEventListener('brand_logo_updated', handleLogoUpdated)
+    }
+  }, [])
 
   // Dynamic navigation links based on active language
   const navLinks = [
@@ -115,7 +136,7 @@ export function Header() {
           <Link
             href="/"
             className={cn(
-              "text-white font-bold hover:opacity-80 transition-[font-size,opacity] duration-500 ease-out uppercase",
+              "text-white font-bold hover:opacity-80 transition-[font-size,opacity] duration-500 ease-out uppercase flex items-center gap-2.5",
               /[\u1780-\u17FF]/.test(t.header.brandName)
                 ? "tracking-normal sm:tracking-wide font-medium"
                 : "tracking-[0.3em] sm:tracking-[0.5em]",
@@ -124,6 +145,18 @@ export function Header() {
             style={{ fontFamily: '"Kantumruy Pro", sans-serif' }}
             aria-label={`${t.header.brandName} - Home`}
           >
+            {logoUrl && (
+              <div className="relative w-7 h-7 sm:w-8 sm:h-8 shrink-0 flex items-center justify-center">
+                <Image
+                  src={logoUrl}
+                  alt={t.header.brandName}
+                  width={32}
+                  height={32}
+                  className="object-contain max-h-7 max-w-7 sm:max-h-8 sm:max-w-8 drop-shadow"
+                  priority
+                />
+              </div>
+            )}
             <span>{t.header.brandName}</span>
           </Link>
 

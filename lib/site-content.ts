@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { isConfiguredSupabase } from '@/lib/supabase/config'
+import { cvData as defaultCvData, CVData, ExperienceItem, EducationItem, AwardItem, SkillCategory } from '@/data/cv-data'
 
 export interface HeroContentData {
   id?: string
@@ -205,6 +206,12 @@ export async function saveAboutContentServer(about: AboutContentData): Promise<A
   }
 
   localData.about = updatedAbout
+  if (localData.cv) {
+    if (updatedAbout.name) localData.cv.name = updatedAbout.name.toUpperCase()
+    if (updatedAbout.tagline) localData.cv.roleTitle = updatedAbout.tagline.toUpperCase()
+    if (updatedAbout.bio) localData.cv.summary = updatedAbout.bio
+    if (updatedAbout.profile_image_url) localData.cv.photoUrl = updatedAbout.profile_image_url
+  }
   await writeLocalData(localData)
 
   const isPlaceholder = !isConfiguredSupabase()
@@ -414,6 +421,24 @@ export async function saveContactItemServer(item: Partial<ContactInfoItem>): Pro
   }
 
   localData.contacts = contacts
+  if (localData.cv) {
+    if (savedItem.type === 'phone' && savedItem.value) localData.cv.phone = savedItem.value
+    if (savedItem.type === 'email' && savedItem.value) localData.cv.email = savedItem.value
+    if (savedItem.type === 'location' && savedItem.value) localData.cv.location = savedItem.value
+    if (savedItem.type === 'website' && savedItem.value) {
+      localData.cv.website = {
+        label: savedItem.value.replace(/^https?:\/\//, '').replace(/\/$/, ''),
+        url: savedItem.value.startsWith('http') ? savedItem.value : `https://${savedItem.value}`,
+      }
+    }
+    if (savedItem.type === 'instagram' && savedItem.value) {
+      localData.cv.social = {
+        platform: 'Instagram',
+        label: savedItem.value.startsWith('@') ? savedItem.value : `@${savedItem.value}`,
+        url: `https://instagram.com/${savedItem.value.replace(/^@/, '')}`,
+      }
+    }
+  }
   await writeLocalData(localData)
 
   const isPlaceholder = !isConfiguredSupabase()
@@ -515,4 +540,385 @@ export async function setAllContactStatusServer(is_active: boolean): Promise<boo
   }
 
   return true
+}
+
+// ----------------------------------------------------------------------
+// CV / RESUME CONTENT
+// ----------------------------------------------------------------------
+
+export async function getCVContent(): Promise<CVData> {
+  const localData = await readLocalData()
+  let cv: CVData = {
+    ...defaultCvData,
+    ...(localData.cv || {}),
+  }
+
+  // Ensure all arrays are populated
+  cv.experiences = Array.isArray(cv.experiences) && cv.experiences.length > 0 ? cv.experiences : defaultCvData.experiences
+  cv.education = Array.isArray(cv.education) && cv.education.length > 0 ? cv.education : defaultCvData.education
+  cv.awards = Array.isArray(cv.awards) && cv.awards.length > 0 ? cv.awards : (defaultCvData.awards || [])
+  cv.coreCompetencies = Array.isArray(cv.coreCompetencies) && cv.coreCompetencies.length > 0 ? cv.coreCompetencies : defaultCvData.coreCompetencies
+  cv.technicalExpertise = Array.isArray(cv.technicalExpertise) && cv.technicalExpertise.length > 0 ? cv.technicalExpertise : defaultCvData.technicalExpertise
+
+  // Sync with about if exists
+  if (localData.about) {
+    if (localData.about.name && localData.about.name !== 'Rithy Chanvirak') {
+      cv.name = localData.about.name.toUpperCase()
+    }
+    if (localData.about.tagline) {
+      cv.roleTitle = localData.about.tagline.toUpperCase()
+    }
+    if (localData.about.bio) {
+      cv.summary = localData.about.bio
+    }
+    if (localData.about.profile_image_url) {
+      cv.photoUrl = localData.about.profile_image_url
+    }
+  }
+
+  // Sync with contacts if exists
+  if (Array.isArray(localData.contacts)) {
+    const phone = localData.contacts.find((c: any) => c.type === 'phone' && c.is_active !== false)
+    const email = localData.contacts.find((c: any) => c.type === 'email' && c.is_active !== false)
+    const location = localData.contacts.find((c: any) => c.type === 'location' && c.is_active !== false)
+    const website = localData.contacts.find((c: any) => c.type === 'website' && c.is_active !== false)
+    const instagram = localData.contacts.find((c: any) => c.type === 'instagram' && c.is_active !== false)
+
+    if (phone?.value) cv.phone = phone.value
+    if (email?.value) cv.email = email.value
+    if (location?.value) cv.location = location.value
+    if (website?.value) {
+      cv.website = {
+        label: website.value.replace(/^https?:\/\//, '').replace(/\/$/, ''),
+        url: website.value.startsWith('http') ? website.value : `https://${website.value}`
+      }
+    }
+    if (instagram?.value) {
+      cv.social = {
+        platform: 'Instagram',
+        label: instagram.value.startsWith('@') ? instagram.value : `@${instagram.value}`,
+        url: `https://instagram.com/${instagram.value.replace(/^@/, '')}`
+      }
+    }
+  }
+
+  // Check Supabase overrides if configured
+  const isPlaceholder = !isConfiguredSupabase()
+  if (!isPlaceholder) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+
+      const [expRes, skillsRes, awardsRes, settingsRes] = await Promise.all([
+        supabase.from('about_experience').select('*').order('order', { ascending: true }),
+        supabase.from('about_skills').select('*').order('order', { ascending: true }),
+        supabase.from('about_awards').select('*').order('order', { ascending: true }),
+        supabase.from('site_settings').select('*').in('key', ['cv_education', 'cv_technical_expertise', 'cv_core_competencies']),
+      ])
+
+      if ((!localData.cv?.experiences || localData.cv.experiences.length === 0) && expRes.data && expRes.data.length > 0) {
+        cv.experiences = expRes.data.map((exp: any, idx: number) => {
+          const rawDesc = exp.description || ''
+          const bulletLines = rawDesc
+            .split('\n')
+            .map((l: string) => l.replace(/^[\s•\-\*]+/, '').trim())
+            .filter(Boolean)
+
+          return {
+            id: exp.id || `exp-${idx}`,
+            company: exp.organization || 'Organization',
+            period: exp.period || 'Present',
+            role: exp.title || 'Role',
+            location: exp.location || 'Phnom Penh, Cambodia',
+            bullets: bulletLines.length > 0 ? bulletLines : [rawDesc || 'Key contributor to system development.'],
+            technologies: exp.technologies ? (Array.isArray(exp.technologies) ? exp.technologies : [exp.technologies]) : undefined,
+          }
+        })
+      }
+
+      if ((!localData.cv?.coreCompetencies || localData.cv.coreCompetencies.length === 0) && skillsRes.data && skillsRes.data.length > 0) {
+        cv.coreCompetencies = skillsRes.data.map((s: any) => s.name).filter(Boolean)
+      }
+
+      if ((!localData.cv?.awards || localData.cv.awards.length === 0) && awardsRes.data && awardsRes.data.length > 0) {
+        cv.awards = awardsRes.data.map((a: any) => ({
+          title: a.title,
+          organization: a.organization,
+          year: String(a.year || new Date().getFullYear()),
+        }))
+      }
+
+      if (settingsRes.data && settingsRes.data.length > 0) {
+        for (const item of settingsRes.data) {
+          try {
+            if (item.key === 'cv_education' && item.value && (!localData.cv?.education || localData.cv.education.length === 0)) {
+              const parsedEdu = JSON.parse(item.value)
+              if (Array.isArray(parsedEdu) && parsedEdu.length > 0) cv.education = parsedEdu
+            }
+            if (item.key === 'cv_technical_expertise' && item.value && (!localData.cv?.technicalExpertise || localData.cv.technicalExpertise.length === 0)) {
+              const parsedExp = JSON.parse(item.value)
+              if (Array.isArray(parsedExp) && parsedExp.length > 0) cv.technicalExpertise = parsedExp
+            }
+            if (item.key === 'cv_core_competencies' && item.value && (!localData.cv?.coreCompetencies || localData.cv.coreCompetencies.length === 0)) {
+              const parsedComp = JSON.parse(item.value)
+              if (Array.isArray(parsedComp) && parsedComp.length > 0) cv.coreCompetencies = parsedComp
+            }
+          } catch {}
+        }
+      }
+    } catch {}
+  }
+
+  return cv
+}
+
+export async function saveCVContentServer(partialCV: Partial<CVData>): Promise<CVData> {
+  const localData = await readLocalData()
+  const currentCV = await getCVContent()
+
+  const updatedCV: CVData = {
+    ...currentCV,
+    ...partialCV,
+  }
+
+  localData.cv = updatedCV
+
+  // Sync to localData.about
+  if (!localData.about) {
+    localData.about = { ...DEFAULT_ABOUT }
+  }
+  if (partialCV.name) localData.about.name = partialCV.name
+  if (partialCV.roleTitle) localData.about.tagline = partialCV.roleTitle
+  if (partialCV.summary) localData.about.bio = partialCV.summary
+  if (partialCV.photoUrl) localData.about.profile_image_url = partialCV.photoUrl
+  localData.about.updated_at = new Date().toISOString()
+
+  // Sync contact items in localData.contacts
+  if (!Array.isArray(localData.contacts)) {
+    localData.contacts = [...DEFAULT_CONTACTS]
+  }
+
+  if (partialCV.phone) {
+    const idx = localData.contacts.findIndex((c: any) => c.type === 'phone')
+    if (idx !== -1) localData.contacts[idx].value = partialCV.phone
+  }
+  if (partialCV.email) {
+    const idx = localData.contacts.findIndex((c: any) => c.type === 'email')
+    if (idx !== -1) localData.contacts[idx].value = partialCV.email
+  }
+  if (partialCV.location) {
+    const idx = localData.contacts.findIndex((c: any) => c.type === 'location')
+    if (idx !== -1) localData.contacts[idx].value = partialCV.location
+  }
+  if (partialCV.website?.url) {
+    const idx = localData.contacts.findIndex((c: any) => c.type === 'website')
+    if (idx !== -1) localData.contacts[idx].value = partialCV.website.url
+  }
+  if (partialCV.social?.label) {
+    const idx = localData.contacts.findIndex((c: any) => c.type === 'instagram')
+    if (idx !== -1) localData.contacts[idx].value = partialCV.social.label
+  }
+
+  await writeLocalData(localData)
+
+  // Supabase sync
+  const isPlaceholder = !isConfiguredSupabase()
+  if (!isPlaceholder) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+
+      // 1. Sync about_content
+      if (partialCV.name || partialCV.roleTitle || partialCV.summary || partialCV.photoUrl) {
+        await supabase.from('about_content').upsert({
+          id: localData.about?.id || 'about-1',
+          name: updatedCV.name,
+          title: localData.about?.title || 'About Me',
+          subtitle: updatedCV.roleTitle,
+          bio: updatedCV.summary,
+          image_url: updatedCV.photoUrl,
+          updated_at: new Date().toISOString(),
+        })
+      }
+
+      // 2. Sync experiences to about_experience
+      if (Array.isArray(partialCV.experiences)) {
+        for (let i = 0; i < partialCV.experiences.length; i++) {
+          const exp = partialCV.experiences[i]
+          const desc = exp.bullets ? exp.bullets.join('\n') : ''
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(exp.id)
+          await supabase.from('about_experience').upsert({
+            ...(isUuid ? { id: exp.id } : {}),
+            title: exp.role,
+            organization: exp.company,
+            period: exp.period,
+            description: desc,
+            order: i,
+            updated_at: new Date().toISOString(),
+          })
+        }
+      }
+
+      // 3. Sync awards to about_awards
+      if (Array.isArray(partialCV.awards)) {
+        for (let i = 0; i < partialCV.awards.length; i++) {
+          const award = partialCV.awards[i]
+          await supabase.from('about_awards').upsert({
+            title: award.title,
+            organization: award.organization,
+            year: award.year,
+            order: i,
+            updated_at: new Date().toISOString(),
+          })
+        }
+      }
+
+      // 4. Backup education, technicalExpertise, coreCompetencies into site_settings
+      if (partialCV.education) {
+        await supabase.from('site_settings').upsert({
+          key: 'cv_education',
+          value: JSON.stringify(partialCV.education),
+          type: 'json',
+          description: 'CV Education Data',
+        })
+      }
+      if (partialCV.technicalExpertise) {
+        await supabase.from('site_settings').upsert({
+          key: 'cv_technical_expertise',
+          value: JSON.stringify(partialCV.technicalExpertise),
+          type: 'json',
+          description: 'CV Technical Expertise Categorized Data',
+        })
+      }
+      if (partialCV.coreCompetencies) {
+        await supabase.from('site_settings').upsert({
+          key: 'cv_core_competencies',
+          value: JSON.stringify(partialCV.coreCompetencies),
+          type: 'json',
+          description: 'CV Core Competencies',
+        })
+      }
+
+      // 5. Sync contact items to Supabase contact_info
+      if (partialCV.phone || partialCV.email || partialCV.location || partialCV.website || partialCV.social) {
+        for (const c of localData.contacts) {
+          try {
+            await supabase.from('contact_info').upsert({
+              id: c.id,
+              type: c.type,
+              label: c.label,
+              value: c.value,
+              icon: c.icon || null,
+              is_active: c.is_active ?? true,
+              order: c.order ?? 0,
+            })
+          } catch {}
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to sync CV to Supabase (local copy saved):', e)
+    }
+  }
+
+  return updatedCV
+}
+
+// ----------------------------------------------------------------------
+// BRAND LOGO CONTENT
+// ----------------------------------------------------------------------
+
+export interface LogoContent {
+  url: string
+  id?: string
+  alt?: string
+  text?: string
+  updated_at?: string
+}
+
+export const DEFAULT_LOGO: LogoContent = {
+  url: '/images/logo/logo_white.png',
+  id: 'default-logo',
+  alt: 'Peak Deth Logo',
+  text: 'PD',
+}
+
+export async function getLogoContent(): Promise<LogoContent> {
+  const localData = await readLocalData()
+  let logo: LogoContent = {
+    ...DEFAULT_LOGO,
+    ...(localData.logo || {}),
+  }
+
+  const isPlaceholder = !isConfiguredSupabase()
+  if (!isPlaceholder) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+      const { data } = await supabase
+        .from('site_settings')
+        .select('*')
+        .in('key', ['site_logo', 'site_logo_id', 'site_logo_text'])
+
+      if (data && data.length > 0) {
+        for (const item of data) {
+          if (item.key === 'site_logo' && item.value) logo.url = item.value
+          if (item.key === 'site_logo_id' && item.value) logo.id = item.value
+          if (item.key === 'site_logo_text' && item.value) logo.text = item.value
+        }
+      }
+    } catch {}
+  }
+
+  return logo
+}
+
+export async function saveLogoContentServer(partialLogo: Partial<LogoContent>): Promise<LogoContent> {
+  const localData = await readLocalData()
+  const currentLogo = await getLogoContent()
+
+  const updatedLogo: LogoContent = {
+    ...currentLogo,
+    ...partialLogo,
+    updated_at: new Date().toISOString(),
+  }
+
+  localData.logo = updatedLogo
+  await writeLocalData(localData)
+
+  const isPlaceholder = !isConfiguredSupabase()
+  if (!isPlaceholder) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = createAdminClient()
+
+      if (updatedLogo.url) {
+        await supabase.from('site_settings').upsert({
+          key: 'site_logo',
+          value: updatedLogo.url,
+          type: 'string',
+          description: 'Primary Site and Admin Brand Logo URL',
+        })
+      }
+      if (updatedLogo.id) {
+        await supabase.from('site_settings').upsert({
+          key: 'site_logo_id',
+          value: updatedLogo.id,
+          type: 'string',
+          description: 'Primary Site Brand Logo Cloudinary ID',
+        })
+      }
+      if (updatedLogo.text) {
+        await supabase.from('site_settings').upsert({
+          key: 'site_logo_text',
+          value: updatedLogo.text,
+          type: 'string',
+          description: 'Brand Logo Monogram / Initials Text',
+        })
+      }
+    } catch (e) {
+      console.warn('Failed to sync logo to Supabase (local copy saved):', e)
+    }
+  }
+
+  return updatedLogo
 }
